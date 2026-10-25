@@ -49,7 +49,7 @@ export function App() {
     setView('design');
   };
 
-  const nav = [['home', 'Australia'], ['streets', 'Streets'], ['design', 'Designer'], ['species', 'Species database'], ['visualise', 'AI visualisation']];
+  const nav = [['streets', 'Streets'], ['design', 'Designer'], ['species', 'Trees'], ['visualise', 'AI preview']];
   const crumbs = [['home', 'Australia'], ['streets', 'South Australia · Adelaide']];
   if (view === 'streets' || view === 'design') crumbs.push(['streets', street.name]);
   if (view === 'design') crumbs.push(['design', `Segment ${seg.id}`]);

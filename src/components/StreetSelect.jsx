@@ -4,10 +4,9 @@ import { Icon, Chip, Src, fmt } from './ui.jsx';
 const { useState } = React;
 
 const METRICS = [
-  { id: 'gvi', label: 'Warm-season GVI', unit: '%', max: 40, src: 'Table D.2' },
-  { id: 'canopy', label: 'Canopy cover (2022)', unit: '%', max: 70, src: 'Table D.2' },
-  { id: 'pgpi', label: 'PGPI priority', unit: '', max: 100, src: 'Table D.3' },
-  { id: 'flow', label: 'Pedestrian flow', unit: '/h', max: 800, src: 'Table D.2' },
+  { id: 'gvi', label: 'Green view (GVI)', unit: '%', max: 40, src: 'Table D.2' },
+  { id: 'canopy', label: 'Canopy cover', unit: '%', max: 70, src: 'Table D.2' },
+  { id: 'pgpi', label: 'Planting priority', unit: '', max: 100, src: 'Table D.3' },
 ];
 
 export function CrossSection({ street, height = 54 }) {
@@ -97,8 +96,8 @@ export function StreetSelect({ onDesign, initialStreet, onStreet }) {
             <span>{m.label} · low</span>
             <i className="strip-ramp" />
             <span>high (scale 0–{m.max}{m.unit})</span>
-            <span className="strip-key"><i className="key-short" /> PGPI top-20 shortlist (Table D.3)</span>
-            <Src kind="thesis" refText={m.src} />
+            <span className="strip-key"><i className="key-short" /> Top-20 planting priority</span>
+            <span>Thesis {m.src}</span>
           </div>
         </div>
 
@@ -108,28 +107,19 @@ export function StreetSelect({ onDesign, initialStreet, onStreet }) {
               <>
                 <div className="seg-panel-head">
                   <h3>Segment {seg.id}</h3>
-                  {seg.shortlist ? <Chip tone="accent">PGPI rank {seg.rank} · shortlisted</Chip> : <Chip>PGPI rank {seg.rank}</Chip>}
+                  {seg.shortlist ? <Chip tone="accent">Priority #{seg.rank} of 100</Chip> : <Chip>Priority #{seg.rank} of 100</Chip>}
                 </div>
                 <dl className="kv">
                   <div><dt>Pedestrian flow</dt><dd>{seg.flow} / h</dd></div>
-                  <div><dt>Warm-season records</dt><dd>{seg.records.toLocaleString('en-AU')}</dd></div>
                   <div><dt>Warm-season GVI</dt><dd>{seg.gvi}%</dd></div>
                   <div><dt>Canopy cover (2022 LiDAR)</dt><dd>{seg.canopy}%</dd></div>
-                  <div><dt>PGPI</dt><dd>{seg.pgpi}</dd></div>
+                  <div><dt>Priority score (PGPI)</dt><dd>{seg.pgpi}</dd></div>
                 </dl>
-                <Src kind="thesis" refText="Tables D.2, D.3" />
                 {seg.decision && (
                   <div className="decision">
-                    <h4>Thesis decision record (Table D.1)</h4>
-                    <dl className="kv">
-                      <div><dt>Stay ≥2 min</dt><dd>{seg.decision.stay}%</dd></div>
-                      <div><dt>Lingering Index</dt><dd>{seg.decision.li}</dd></div>
-                      <div><dt>Design role</dt><dd>{seg.decision.role}</dd></div>
-                      <div><dt>Feasibility</dt><dd>{seg.decision.feasibility}</dd></div>
-                      <div><dt>Action</dt><dd>{seg.decision.action}</dd></div>
-                      <div><dt>Primary species</dt><dd>{seg.decision.species}</dd></div>
-                    </dl>
-                    <p className="fine">{seg.decision.rationale}</p>
+                    <h4>Thesis recommendation</h4>
+                    <p>{seg.decision.action} <b>{seg.decision.species}</b> · {seg.decision.role}-oriented · {seg.decision.feasibility}</p>
+                    <p className="fine">{seg.decision.rationale} (Table D.1)</p>
                   </div>
                 )}
                 <button className="btn btn-primary btn-lg" onClick={() => onDesign(street.id, seg.id)}>
@@ -148,14 +138,13 @@ export function StreetSelect({ onDesign, initialStreet, onStreet }) {
               </div>
             )}
           </div>
-          <div className="panel">
-            <h3>Cross-section used in the designer</h3>
+          <details className="panel fold">
+            <summary>Street cross-section used in the designer</summary>
             <CrossSection street={street} />
             <p className="fine">
-              Widths in metres. Footpaths use the thesis street mean ({street.footpath} m, Table 5.3). Lanes, parking and medians are a demonstration layout because the thesis does not report carriageway geometry. Façade height {street.buildingHeight} m = thesis mean H/W ratio {street.hw} × {street.width.toFixed(1)} m demo width.
+              Widths in metres. Footpaths use the thesis street mean ({street.footpath} m, Table 5.3); lanes, parking and medians are a demonstration layout because the thesis does not report carriageway geometry.
             </p>
-            <div className="src-row"><Src kind="thesis" refText="footpath, H/W: Table 5.3" /><Src kind="demo" /></div>
-          </div>
+          </details>
         </div>
       </section>
     </div>

@@ -474,3 +474,51 @@ table.db tr.is-open td { background: var(--accent-soft); }
 .scenarios table.data td:first-child { white-space: nowrap; max-width: 122px; overflow: hidden; text-overflow: ellipsis; }
 .scenarios table.data td, .scenarios table.data th { padding: 6px 4px; }
 .wc { white-space: nowrap; font-size: 12px; }
+
+/* ---------- simplified results UI ---------- */
+.results { display: grid; border: 1px solid var(--line); border-radius: var(--r); background: var(--bg); }
+.res-row { display: grid; gap: 5px; padding: 11px 14px; border-top: 1px solid var(--line); }
+.res-row:first-child { border-top: 0; }
+.res-top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.res-label { font-size: 13.5px; font-weight: 600; display: inline-flex; align-items: center; gap: 7px; }
+.res-value { font-family: var(--font-mono); font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.res-value small { font-size: 12px; color: var(--ink-3); margin-left: 2px; font-weight: 500; }
+.res-note { font-size: 12px; color: var(--ink-3); }
+.res-empty { font-size: 13px; color: var(--ink-2); background: var(--accent-soft); border-radius: var(--r-sm); padding: 10px 12px; }
+.dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; flex: none; }
+.dot-thesis { background: var(--thesis); }
+.dot-est { background: var(--ochre); }
+.dot-calc { background: var(--ink-3); }
+.legend-line { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; font-size: 11.5px; color: var(--ink-3); }
+.legend-line .dot { margin-left: 2px; }
+.linkbtn { background: none; border: 0; padding: 0; color: var(--accent); cursor: pointer; font-size: 12px; font-weight: 600; text-decoration: underline; text-underline-offset: 2px; justify-self: start; }
+.fold { border-top: 1px solid var(--line); padding-top: 10px; display: grid; gap: 10px; }
+.fold > summary { cursor: pointer; font-weight: 600; font-size: 13px; list-style: none; display: flex; align-items: center; gap: 6px; }
+.fold > summary::-webkit-details-marker { display: none; }
+.fold > summary::before { content: '›'; display: inline-block; transition: transform 0.15s; color: var(--ink-3); font-size: 16px; line-height: 1; }
+.fold[open] > summary::before { transform: rotate(90deg); }
+details.panel.fold { border-top: 1px solid var(--line); padding-top: 16px; }
+.seg-ctl-sm { justify-self: start; }
+.meter-gvi1 i { background: var(--ochre); }
+.target-chips { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 8px; }
+.target-chips button { padding: 10px 0; border-radius: var(--r-sm); border: 1px solid var(--line-2); background: var(--surface); font-family: var(--font-mono); font-size: 15px; font-weight: 600; cursor: pointer; }
+.target-chips button.is-on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.target-status p.ok { color: var(--good); font-weight: 600; }
+.picks { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.picks li { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--bg); }
+.pick-name { flex: 1; display: grid; font-weight: 600; font-size: 13px; min-width: 0; }
+.pick-name small { font-weight: 400; color: var(--ink-3); font-size: 11.5px; font-family: var(--font-mono); }
+.chip-btn { border: 0; cursor: pointer; font: inherit; font-size: 11.5px; font-weight: 600; }
+.chip-btn:hover { filter: brightness(0.96); text-decoration: underline; }
+.tabs { align-items: center; }
+.tabs-info { margin-left: auto; }
+.settings { display: grid; gap: 10px; padding-bottom: 6px; }
+.decision p { font-size: 13px; }
+.src { border: 0; padding: 0; font-weight: 500; }
+.src::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: currentColor; margin-right: 4px; vertical-align: 1px; }
+.lib-head h3 { font-size: 13.5px; font-weight: 500; color: var(--ink-2); }
+.lib-head h3 b { color: var(--accent); }
+.lib-row { grid-auto-columns: 168px; }
+.sp-card { padding: 6px 8px; gap: 6px; }
+.sp-meta { font-size: 11px; }
+.sd-grid { grid-template-columns: minmax(0, 680px); align-items: start; }

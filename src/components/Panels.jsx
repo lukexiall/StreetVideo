@@ -11,39 +11,6 @@ export const RENDER_PALETTE = {
   window: [96, 112, 124], shop: [70, 82, 90], parapet: [150, 132, 116], trunk: [92, 74, 58],
 };
 
-function Bar({ parts }) {
-  const total = parts.reduce((a, p) => a + p.n, 0) || 1;
-  return (
-    <div className="dist">
-      <div className="dist-bar">
-        {parts.map((p) => (p.n ? <i key={p.label} className={`dist-${p.cls}`} style={{ width: `${(p.n / total) * 100}%` }} title={`${p.label}: ${p.n}`} /> : null))}
-      </div>
-      <div className="dist-legend">
-        {parts.map((p) => (
-          <span key={p.label}><i className={`dist-${p.cls}`} />{p.label} {p.n}</span>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function Metric({ label, value, unit, sub, children, src }) {
-  return (
-    <div className="metric">
-      <div className="metric-head">
-        <span className="metric-label">{label}</span>
-        {src}
-      </div>
-      <div className="metric-value">
-        {value}
-        {unit && <span className="metric-unit">{unit}</span>}
-      </div>
-      {sub && <div className="metric-sub">{sub}</div>}
-      {children}
-    </div>
-  );
-}
-
 // Table 5.4 reference curve with the existing and design GVI marked.
 function DurationChart({ existing, total }) {
   const [hover, setHover] = useState(null);
@@ -88,65 +55,62 @@ function DurationChart({ existing, total }) {
   );
 }
 
-export function FeedbackPanel({ street, seg, trees, metrics, crownSize, viewSide, setViewSide, warnings }) {
+function Row({ label, value, unit, note, kind, bar, barCls }) {
+  return (
+    <div className="res-row">
+      <div className="res-top">
+        <span className="res-label"><i className={`dot dot-${kind}`} />{label}</span>
+        <span className="res-value">{value}{unit && <small>{unit}</small>}</span>
+      </div>
+      {bar !== undefined && <div className={`meter ${barCls || ''}`}><i style={{ width: `${Math.max(0, Math.min(100, bar))}%` }} /></div>}
+      {note && <p className="res-note">{note}</p>}
+    </div>
+  );
+}
+
+export function FeedbackPanel({ street, seg, trees, metrics, crownSize, viewSide, setViewSide, warnings, openAbout }) {
   const refs = [useRef(null), useRef(null), useRef(null), useRef(null)];
+  const [showViews, setShowViews] = useState(false);
   const size = 112;
   useEffect(() => {
+    if (!showViews) return undefined;
     const id = requestAnimationFrame(() => renderViews(street, trees, SPECIES_BY_ID, crownSize, viewSide, refs.map((r) => r.current), RENDER_PALETTE, size));
     return () => cancelAnimationFrame(id);
-  }, [street, trees, crownSize, viewSide]);
+  }, [street, trees, crownSize, viewSide, showViews]);
   const a = metrics.attrs;
+  const n = trees.length;
   const total = Math.min(100, seg.gvi + metrics.gvi.pct);
-  const ratingPos = a.overall === null ? null : ((a.overall - RATING_RANGE[0]) / (RATING_RANGE[1] - RATING_RANGE[0])) * 100;
   return (
     <div className="feedback">
-      <div className="metric-grid">
-        <Metric label="Trees in design" value={trees.length} sub={a.species.length ? a.species.join(', ') : 'Choose a species below, then click the street'} />
-        <Metric label="Canopy cover" value={fmt(metrics.canopy.pct)} unit="%" src={<Src kind="estimate" />}
-          sub={<>Added crowns {fmt(metrics.canopy.area, 0)} m² over {fmt(metrics.canopy.siteArea, 0)} m² site{metrics.canopy.overlap > 0.5 ? `, ${fmt(metrics.canopy.overlap, 0)} m² overlap counted once` : ''}. Existing 2022 canopy: {seg.canopy}% <Src kind="thesis" refText="D.2" /></>}>
-          <div className="meter"><i style={{ width: `${Math.min(100, metrics.canopy.pct)}%` }} /></div>
-        </Metric>
-        <Metric label="Green View Index" value={`≈ ${fmt(total)}`} unit="%" src={<Src kind="estimate" />}
-          sub={<>Measured {seg.gvi}% <Src kind="thesis" refText="D.2" /> + design trees ≈ {fmt(metrics.gvi.pct)}% (four-view ray-cast proxy). Indicative sum; not a measurement.</>}>
-          <div className="meter meter-gvi"><i className="m-exist" style={{ width: `${Math.min(100, seg.gvi * 2.5)}%` }} /><i style={{ width: `${Math.min(100 - seg.gvi * 2.5, metrics.gvi.pct * 2.5)}%` }} /></div>
-          <div className="meter-scale"><span>0</span><span>20%</span><span>40%</span></div>
-        </Metric>
-        <Metric label="Water demand" value={trees.length ? levelLabel(a.waterMean) : '—'} src={<Src kind="thesis" refText="Table 6.1" />}
-          sub={trees.length ? `Mean class score ${fmt(a.waterMean, 2)} (Low 1 · Moderate 2 · High 3)` : 'No trees yet'}>
-          <Bar parts={[{ label: 'Low', n: a.water.Low, cls: 'lo' }, { label: 'Moderate', n: a.water.Moderate, cls: 'mid' }, { label: 'High', n: a.water.High, cls: 'hi' }]} />
-        </Metric>
-        <Metric label="Future climate suitability" value={trees.length ? levelLabel(a.climateMean) : '—'} src={<Src kind="thesis" refText="Table 6.1" />}
-          sub={trees.length ? `${a.climate.High} of ${trees.length} trees rated High for hot–dry future conditions` : 'No trees yet'}>
-          <Bar parts={[{ label: 'High', n: a.climate.High, cls: 'good' }, { label: 'Moderate', n: a.climate.Moderate, cls: 'mid' }, { label: 'Low', n: a.climate.Low, cls: 'warn' }]} />
-        </Metric>
-        <Metric label="Public preference" value={fmt(a.overall, 2)} unit="/ 5" src={<Src kind="thesis" refText="Table C3.1" />}
-          sub="Mean overall perceptual score of planted trees (EMM, 416 participants)">
-          {ratingPos !== null && (
-            <div className="rating-scale">
-              <div className="rs-track"><i style={{ left: `${Math.max(0, Math.min(100, ratingPos))}%` }} /></div>
-              <div className="rs-ends"><span>3.04 lowest species</span><span>3.32 highest</span></div>
-            </div>
-          )}
-          {trees.length > 0 && (
-            <dl className="dims">
-              <div><dt>Attractiveness</dt><dd>{fmt(a.attractiveness, 2)}</dd></div>
-              <div><dt>Comfort</dt><dd>{fmt(a.comfort, 2)}</dd></div>
-              <div><dt>Safety</dt><dd>{fmt(a.safety, 2)}</dd></div>
-              <div><dt>Willingness to stay</dt><dd>{fmt(a.stay, 2)}</dd></div>
-            </dl>
-          )}
-          {trees.length > 0 && <p className="fine">Dimension means derived from Tables C2.1–C2.4 (intercept + species coefficient).</p>}
-        </Metric>
+      {!n && <p className="res-empty">Choose a tree below and click the street. Results appear here as you plant.</p>}
+      <div className="results">
+        <Row label="Trees" value={n} kind="calc" note={n ? a.species.join(', ') : null} />
+        <Row label="Canopy cover" value={fmt(metrics.canopy.pct)} unit="%" kind="est" bar={metrics.canopy.pct}
+          note={`Existing in this segment: ${seg.canopy}%`} />
+        <Row label="Green View Index" value={`≈ ${fmt(total)}`} unit="%" kind="est" bar={total * 2.5} barCls="meter-gvi1"
+          note={`Measured today ${seg.gvi}% + your trees ≈ ${fmt(metrics.gvi.pct)}%`} />
+        <Row label="Water demand" value={n ? levelLabel(a.waterMean) : '—'} kind="thesis"
+          note={n ? `Low ${a.water.Low} · Moderate ${a.water.Moderate} · High ${a.water.High}` : null} />
+        <Row label="Climate suitability" value={n ? levelLabel(a.climateMean) : '—'} kind="thesis"
+          note={n ? `${a.climate.High} of ${n} trees rated High for a hotter, drier future` : null} />
+        <Row label="Public preference" value={fmt(a.overall, 2)} unit=" / 5" kind="thesis"
+          note={n ? 'Survey of 416 people; species range 3.04–3.32' : null} />
       </div>
+      <p className="legend-line"><i className="dot dot-thesis" />From the thesis <i className="dot dot-est" />Design estimate, not a measurement <button className="linkbtn" onClick={openAbout}>How is this calculated?</button></p>
 
-      <section className="panel-sec">
-        <div className="sec-head">
-          <h3>Eye-level views</h3>
-          <div className="seg-ctl" role="radiogroup" aria-label="Viewpoint side">
-            {street.sides.map((s, i) => (
-              <button key={s} role="radio" aria-checked={viewSide === i} className={viewSide === i ? 'is-on' : ''} onClick={() => setViewSide(i)}>{s}</button>
-            ))}
-          </div>
+      {warnings.length > 0 && (
+        <details className="fold">
+          <summary>{warnings.length} placement {warnings.length === 1 ? 'check' : 'checks'}</summary>
+          <ul className="checks">{warnings.map((w, i) => <li key={i}>{w}</li>)}</ul>
+        </details>
+      )}
+
+      <details className="fold" onToggle={(e) => setShowViews(e.currentTarget.open)}>
+        <summary>Eye-level views</summary>
+        <div className="seg-ctl seg-ctl-sm" role="radiogroup" aria-label="Viewpoint side">
+          {street.sides.map((s, i) => (
+            <button key={s} role="radio" aria-checked={viewSide === i} className={viewSide === i ? 'is-on' : ''} onClick={() => setViewSide(i)}>{s}</button>
+          ))}
         </div>
         <div className="views">
           {HEADINGS.map((h, i) => (
@@ -156,38 +120,36 @@ export function FeedbackPanel({ street, seg, trees, metrics, crownSize, viewSide
             </figure>
           ))}
         </div>
-        <p className="fine">Schematic ray-cast of the design trees only, from one point at {EYE_HEIGHT} m in mid-segment, four {VIEW_FOV}° views averaged as in §8.2.2. Existing vegetation and context beyond 20 m are not modelled.</p>
-      </section>
+      </details>
 
-      <section className="panel-sec">
-        <h3>GVI and time in the street</h3>
-        <DurationChart existing={seg.gvi} total={trees.length ? total : null} />
-      </section>
-
-      <section className="panel-sec">
-        <h3>Design checks</h3>
-        {warnings.length ? (
-          <ul className="checks">{warnings.map((w, i) => <li key={i}><Chip tone="warn">Check</Chip> {w}</li>)}</ul>
-        ) : (
-          <p className="fine">No placement conflicts under the app's rules (traffic lanes blocked, 1.8 m clear walkway, 4 m trunk spacing, façade clearance).</p>
+      <details className="fold">
+        <summary>What the thesis found about GVI</summary>
+        <DurationChart existing={seg.gvi} total={n ? total : null} />
+        {n > 0 && (
+          <dl className="dims">
+            <div><dt>Attractiveness</dt><dd>{fmt(a.attractiveness, 2)}</dd></div>
+            <div><dt>Comfort</dt><dd>{fmt(a.comfort, 2)}</dd></div>
+            <div><dt>Safety</dt><dd>{fmt(a.safety, 2)}</dd></div>
+            <div><dt>Willing to stay</dt><dd>{fmt(a.stay, 2)}</dd></div>
+          </dl>
         )}
-      </section>
+      </details>
     </div>
   );
 }
 
 export function ScenarioPanel({ street, seg, crownSize, viewSide, currentTotal, onApply }) {
   const [target, setTarget] = useState(20);
-  const [layout, setLayout] = useState('both');
-  const hasMedian = street.profile.some((p) => p.kind === 'median');
-  const rows = useMemo(() => SPECIES.map((sp) => ({ sp, r: scenarioFor(street, seg.gvi, sp, layout, target, crownSize, viewSide) }))
-    .sort((p, q) => (q.r.reached - p.r.reached) || (p.r.reached ? p.r.n - q.r.n : q.r.total - p.r.total) || (q.sp.overall - p.sp.overall)), [street, seg, layout, target, crownSize, viewSide]);
-  const thesis = { hindley: 'Hindley', gouger: 'Gouger' }[street.id];
+  const [all, setAll] = useState(false);
+  const rows = useMemo(() => SPECIES.map((sp) => ({ sp, r: scenarioFor(street, seg.gvi, sp, 'both', target, crownSize, viewSide) }))
+    .sort((p, q) => (q.r.reached - p.r.reached) || (p.r.reached ? p.r.n - q.r.n : q.r.total - p.r.total) || (q.sp.overall - p.sp.overall)), [street, seg, target, crownSize, viewSide]);
+  const shown = all ? rows : rows.slice(0, 5);
+  const met = currentTotal >= target;
   return (
     <div className="scenarios">
-      <div className="sec-head">
-        <h3>Target GVI</h3>
-        <div className="seg-ctl" role="radiogroup" aria-label="Target GVI">
+      <div>
+        <h3>Target green view</h3>
+        <div className="target-chips" role="radiogroup" aria-label="Target GVI">
           {[5, 10, 20, 30].map((t) => (
             <button key={t} role="radio" aria-checked={target === t} className={target === t ? 'is-on' : ''} onClick={() => setTarget(t)}>{t}%</button>
           ))}
@@ -198,58 +160,40 @@ export function ScenarioPanel({ street, seg, crownSize, viewSide, currentTotal, 
           <i style={{ width: `${Math.min(100, (currentTotal / 40) * 100)}%` }} />
           <b style={{ left: `${(target / 40) * 100}%` }} />
         </div>
-        <p>Current design ≈ <b>{fmt(currentTotal)}%</b> GVI ({seg.gvi}% measured + design trees). {currentTotal >= target ? 'Target reached.' : `${fmt(target - currentTotal)} points below the ${target}% target.`}</p>
+        <p className={met ? 'ok' : ''}>{met ? `Reached: your design is about ${fmt(currentTotal)}%.` : `Your design is about ${fmt(currentTotal)}%, ${fmt(target - currentTotal)} points short.`}</p>
       </div>
-      <label className="field">
-        <span>Layout to test</span>
-        <select id="scenario-layout" value={layout} onChange={(e) => setLayout(e.target.value)}>
-          <option value="both">Both footpaths, 1.0 m from kerb</option>
-          <option value="one">{street.sides[0]} footpath only</option>
-          {hasMedian && <option value="all">Both footpaths + median</option>}
-        </select>
-      </label>
-      <p className="fine">For each species the app adds evenly spaced trees per row (minimum spacing max(4 m, ½ crown diameter)) until the indicative GVI reaches the target. About 20% GVI is the thesis' study-specific scenario reference, where the duration curve levels off (§8.2.6, Table 5.4); it is not an established design target.</p>
-      <div className="table-wrap">
-        <table className="data">
-          <thead><tr><th>Species</th><th>Trees</th><th>GVI ≈</th><th>Canopy</th><th title="Water demand · climate suitability (Table 6.1)">W · C</th><th>Pref.</th><th /></tr></thead>
-          <tbody>
-            {rows.map(({ sp, r }) => (
-              <tr key={sp.id} className={r.reached ? '' : 'is-short'}>
-                <td><span className="sw" style={{ background: sp.color }} />{sp.name}</td>
-                <td className="num">{r.already ? '0' : r.n}{!r.reached && <span className="flag" title="Target not reached within this segment">max</span>}</td>
-                <td className="num">{fmt(r.total)}%</td>
-                <td className="num">{fmt(r.canopy, 0)}%</td>
-                <td className="wc"><span className={`lvl lvl-w-${sp.water}`} title={`Water ${sp.water}`}>{sp.water[0]}</span> · <span className={`lvl lvl-c-${sp.climate}`} title={`Climate ${sp.climate}`}>{sp.climate[0]}</span></td>
-                <td className="num">{sp.overall.toFixed(2)}</td>
-                <td>{r.n > 0 && <button className="btn btn-sm" onClick={() => onApply(r.trees, sp)}>Apply</button>}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <p className="fine">W · C = water demand · future climate suitability (L / M / H, Table 6.1). Pref. = overall perceptual score (Table C3.1). "max" = the target is not reached even at the densest layout the spacing rule allows in this 20 m segment.</p>
-      {thesis && (
-        <section className="panel-sec">
-          <h3>Thesis corridor scenarios: {thesis} Street</h3>
-          <table className="data">
-            <thead><tr><th>Scenario</th><th>Trees added</th><th>Canopy</th><th>Illustrative GVI</th></tr></thead>
-            <tbody>
-              {(thesis === 'Hindley'
-                ? [['Existing', 0, 0.3, 0.0], ['A · Minimal', 12, 11.0, 20.4], ['B · Balanced', 24, 25.0, 27.4], ['C · Maximum', 46, 43.0, 45.6]]
-                : [['Existing', 0, 14.3, 8.2], ['A · Minimal', 7, 18.0, 13.5], ['B · Balanced', 18, 24.0, 20.0], ['C · Maximum', 32, 34.0, 28.5]]
-              ).map(([n, t, c, g]) => <tr key={n}><td>{n}</td><td className="num">+{t}</td><td className="num">{c}%</td><td className="num">{g}%</td></tr>)}
-            </tbody>
-          </table>
-          <p className="fine">Table 8.4: whole-corridor design estimates (26 segments); GVI values are render-based for the displayed views only. <Src kind="thesis" refText="Table 8.4" /></p>
-        </section>
-      )}
+      <h3>Quickest way to get there</h3>
+      <ol className="picks">
+        {shown.map(({ sp, r }) => (
+          <li key={sp.id}>
+            <span className="sw" style={{ background: sp.color }} />
+            <span className="pick-name">{sp.name}<small>{r.already ? 'Already met' : r.reached ? `${r.n} trees · ≈ ${fmt(r.total)}%` : `Best: ${r.n} trees · ≈ ${fmt(r.total)}%`}</small></span>
+            {r.n > 0 && <button className="btn btn-sm" onClick={() => onApply(r.trees, sp)}>Use</button>}
+          </li>
+        ))}
+      </ol>
+      <button className="linkbtn" onClick={() => setAll(!all)}>{all ? 'Show top 5' : 'Compare all 20 species'}</button>
+      <p className="fine">Trees are spaced evenly along both footpaths. The thesis treats ~20% GVI as a reference point, not a fixed target.</p>
     </div>
   );
 }
 
-export function MethodPanel({ crownSize }) {
+export function MethodPanel({ crownSize, setCrownSize, showLabels, setShowLabels, showViewpoint, setShowViewpoint }) {
   return (
     <div className="method">
+      <h3>Display settings</h3>
+      <div className="settings">
+        <label className="field">
+          <span>Crown size used for drawing</span>
+          <select id="crown-size" value={crownSize} onChange={(e) => setCrownSize(e.target.value)}>
+            <option value="lower">Smaller: lower end of each canopy class (default)</option>
+            <option value="mid">Middle of each canopy class</option>
+            <option value="upper">Larger: upper end of each canopy class</option>
+          </select>
+        </label>
+        <label className="check"><input id="show-labels" type="checkbox" checked={showLabels} onChange={(e) => setShowLabels(e.target.checked)} /> Show species names on the plan</label>
+        <label className="check"><input id="show-vp" type="checkbox" checked={showViewpoint} onChange={(e) => setShowViewpoint(e.target.checked)} /> Show the GVI viewpoint on the plan</label>
+      </div>
       <h3>Where each number comes from</h3>
       <ul className="method-list">
         <li><Src kind="thesis" /> Species attributes (Table 6.1), leaf type (Appendix C1 survey panels), perception ratings (Tables C2.1–C2.4, C3.1, 8.5), segment flow / GVI / canopy / PGPI (Tables D.2, D.3), decision records (Table D.1), duration curve (Table 5.4), street summaries (Tables 8.2, 5.3).</li>

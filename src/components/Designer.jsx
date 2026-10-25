@@ -1,4 +1,4 @@
-import { SPECIES, SPECIES_BY_ID, SHADE_CLASSES, crownDiameter } from '../data/species.js';
+import { SPECIES, SPECIES_BY_ID, SPECIES_BY_NAME, SHADE_CLASSES, crownDiameter } from '../data/species.js';
 import { canopyCover, gviProxy, attributeSummary, checkPlacement, levelLabel, zoneAt } from '../lib/metrics.js';
 import { uid } from '../lib/store.js';
 import { PlanCanvas } from './PlanCanvas.jsx';
@@ -8,47 +8,27 @@ import { Icon, Chip, Modal, CopyBox, fmt } from './ui.jsx';
 
 const { useState, useMemo, useEffect, useCallback } = React;
 
-const FILTERS = [
-  { id: 'all', label: 'All 20', test: () => true },
-  { id: 'climate', label: 'High climate suitability', test: (s) => s.climate === 'High' },
-  { id: 'water', label: 'Low water', test: (s) => s.water === 'Low' },
-  { id: 'small', label: 'Small canopy', test: (s) => s.shade === 'Small' },
-  { id: 'pref', label: 'Top preference', test: (s) => s.overall >= 3.22 },
-];
-
 function Library({ armed, setArmed, crownSize }) {
-  const [filter, setFilter] = useState('all');
   const [q, setQ] = useState('');
-  const f = FILTERS.find((x) => x.id === filter);
-  const list = SPECIES.filter(f.test).filter((s) => !q || s.name.toLowerCase().includes(q.toLowerCase()));
+  const list = SPECIES.filter((s) => !q || s.name.toLowerCase().includes(q.toLowerCase()));
   return (
     <div className="library">
       <div className="lib-head">
-        <h3>Species library</h3>
-        <div className="lib-filters" role="radiogroup" aria-label="Filter species">
-          {FILTERS.map((x) => (
-            <button key={x.id} role="radio" aria-checked={filter === x.id} className={`seg-pill ${filter === x.id ? 'is-on' : ''}`} onClick={() => setFilter(x.id)}>{x.label}</button>
-          ))}
-        </div>
-        <input id="lib-search" className="lib-search" placeholder="Search species" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search species" />
+        <h3>{armed ? <>Planting <b>{SPECIES_BY_ID[armed].name}</b> · click the street, Esc to stop</> : 'Pick a tree, then click the street'}</h3>
+        <input id="lib-search" className="lib-search" placeholder="Search" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search species" />
       </div>
       <div className="lib-row">
         {list.map((sp) => (
           <button key={sp.id} className={`sp-card ${armed === sp.id ? 'is-armed' : ''}`} onClick={() => setArmed(armed === sp.id ? null : sp.id)} aria-pressed={armed === sp.id}
-            title={`${sp.name}: ${sp.shade} canopy (${SHADE_CLASSES[sp.shade].range}), ${sp.water} water, ${sp.climate} climate suitability`}>
-            <SpeciesIcon sp={sp} size={40} />
+            title={`${sp.name}: ${sp.shade} canopy (${SHADE_CLASSES[sp.shade].range}) · water ${sp.water} · climate ${sp.climate} · preference ${sp.overall.toFixed(2)}`}>
+            <SpeciesIcon sp={sp} size={34} />
             <span className="sp-body">
               <span className="sp-name">{sp.name}</span>
-              <span className="sp-meta">
-                <span>{sp.shade} · ⌀{fmt(crownDiameter(sp, crownSize), 1)} m</span>
-                <span className={`lvl lvl-w-${sp.water}`}>Water {sp.water}</span>
-                <span className={`lvl lvl-c-${sp.climate}`}>Climate {sp.climate}</span>
-                <span className="mono">★ {sp.overall.toFixed(2)}</span>
-              </span>
+              <span className="sp-meta">{sp.shade} · ⌀{fmt(crownDiameter(sp, crownSize), 0)} m</span>
             </span>
           </button>
         ))}
-        {!list.length && <p className="fine">No species match this filter.</p>}
+        {!list.length && <p className="fine">No species match.</p>}
       </div>
     </div>
   );
@@ -64,19 +44,15 @@ function Inspector({ tree, street, crownSize, onReplace, onDelete, onClose }) {
         <b>{sp.name}</b>
         <button className="icon-btn" onClick={onClose} aria-label="Deselect"><Icon name="close" size={16} /></button>
       </div>
-      <dl className="kv kv-tight">
-        <div><dt>Position</dt><dd>{fmt(tree.u)} m across · {fmt(tree.v)} m along</dd></div>
-        <div><dt>Zone</dt><dd>{zone ? zone.label : '—'}</dd></div>
-        <div><dt>Crown</dt><dd>⌀{fmt(crownDiameter(sp, crownSize))} m ({sp.shade})</dd></div>
-      </dl>
+      <p className="fine">{zone ? zone.label : ''} · crown ⌀{fmt(crownDiameter(sp, crownSize))} m</p>
       <label className="field">
-        <span>Replace species</span>
+        <span>Change species</span>
         <select id="insp-replace" value={tree.speciesId} onChange={(e) => onReplace(tree.id, e.target.value)}>
           {SPECIES.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
         </select>
       </label>
       <button className="btn btn-danger" onClick={() => onDelete(tree.id)}><Icon name="trash" size={16} /> Delete tree</button>
-      <p className="fine">Drag to move · Delete key removes</p>
+      <p className="fine">Drag the tree to move it.</p>
     </div>
   );
 }
@@ -138,7 +114,7 @@ function SchemesPanel({ current, schemes, setSchemes, onLoad, notify, openExport
   };
   const keys = ['A', 'B', 'C'];
   const sums = Object.fromEntries(keys.map((k) => [k, schemes[k] ? schemeSummary(schemes[k]) : null]));
-  const fields = [['where', 'Location'], ['trees', 'Trees'], ['species', 'Species'], ['canopy', 'Canopy (est.)'], ['gvi', 'GVI (indicative)'], ['water', 'Water demand'], ['climate', 'Climate suitability'], ['pref', 'Public preference'], ['crown', 'Crown setting']];
+  const fields = [['where', 'Segment'], ['trees', 'Trees'], ['canopy', 'Canopy'], ['gvi', 'GVI ≈'], ['water', 'Water'], ['climate', 'Climate'], ['pref', 'Preference']];
   return (
     <div className="schemes">
       <div className="scheme-slots">
@@ -169,7 +145,7 @@ function SchemesPanel({ current, schemes, setSchemes, onLoad, notify, openExport
         </table>
       </div>
       <button className="btn btn-primary" onClick={openExport}><Icon name="copy" size={16} /> Export design summary</button>
-      <p className="fine">Schemes are kept in this browser. Export produces a Markdown summary you can paste into a report or email.</p>
+      
     </div>
   );
 }
@@ -178,9 +154,10 @@ export function Designer({ street, seg, trees, setTrees, crownSize, setCrownSize
   const [armed, setArmed] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
   const [tab, setTab] = useState('feedback');
+  const [aboutOpen, setAboutOpen] = useState(false);
   const [viewSide, setViewSide] = useState(0);
   const [showLabels, setShowLabels] = useState(false);
-  const [showViewpoint, setShowViewpoint] = useState(true);
+  const [showViewpoint, setShowViewpoint] = useState(false);
   const [past, setPast] = useState([]);
   const [future, setFuture] = useState([]);
   const [exportOpen, setExportOpen] = useState(false);
@@ -234,30 +211,23 @@ export function Designer({ street, seg, trees, setTrees, crownSize, setCrownSize
       <div className="d-main">
         <div className="toolbar">
           <div className="tb-group">
-            <button className="btn btn-ghost btn-sm" onClick={openStreet}><Icon name="back" size={16} /> Segments</button>
+            <button className="btn btn-ghost btn-sm" onClick={openStreet}><Icon name="back" size={16} /> {street.name}</button>
             <div className="seg-nav">
               <button className="icon-btn" disabled={idx <= 0} onClick={() => goSegment(street.segments[idx - 1].id)} aria-label="Previous segment">‹</button>
               <b>{seg.id}</b>
               <button className="icon-btn" disabled={idx >= street.segments.length - 1} onClick={() => goSegment(street.segments[idx + 1].id)} aria-label="Next segment">›</button>
             </div>
-            {seg.shortlist && <Chip tone="accent">PGPI #{seg.rank}</Chip>}
-            {seg.decision && <Chip tone="thesis" title={seg.decision.rationale}>Thesis: {seg.decision.action} · {seg.decision.species}</Chip>}
+            {seg.decision && SPECIES_BY_NAME[seg.decision.species] && (
+              <button className="chip chip-thesis chip-btn" title={`Thesis decision record (Table D.1): ${seg.decision.action}. ${seg.decision.rationale}`}
+                onClick={() => { setArmed(SPECIES_BY_NAME[seg.decision.species].id); setSelectedId(null); }}>
+                Thesis suggests {seg.decision.species}
+              </button>
+            )}
           </div>
           <div className="tb-group">
-            <button className={`btn btn-sm ${!armed ? 'is-on' : ''}`} onClick={() => setArmed(null)} aria-pressed={!armed}><Icon name="cursor" size={15} /> Select</button>
-            <button className="icon-btn" onClick={undo} disabled={!past.length} aria-label="Undo"><Icon name="undo" /></button>
-            <button className="icon-btn" onClick={redo} disabled={!future.length} aria-label="Redo"><Icon name="redo" /></button>
-            <button className="btn btn-sm btn-ghost" disabled={!trees.length} onClick={() => { commit([]); setSelectedId(null); notify('All trees cleared · Undo restores them'); }}>Clear</button>
-            <label className="field-inline">
-              <span>Crown size</span>
-              <select id="crown-size" value={crownSize} onChange={(e) => setCrownSize(e.target.value)} title="Representative crown area within each Table 6.1 shade class (app assumption)">
-                <option value="lower">Class lower bound (default)</option>
-                <option value="mid">Class mid value</option>
-                <option value="upper">Class upper bound</option>
-              </select>
-            </label>
-            <label className="check"><input id="show-labels" type="checkbox" checked={showLabels} onChange={(e) => setShowLabels(e.target.checked)} /> Labels</label>
-            <label className="check"><input id="show-vp" type="checkbox" checked={showViewpoint} onChange={(e) => setShowViewpoint(e.target.checked)} /> GVI viewpoint</label>
+            <button className="icon-btn" onClick={undo} disabled={!past.length} aria-label="Undo" title="Undo"><Icon name="undo" /></button>
+            <button className="icon-btn" onClick={redo} disabled={!future.length} aria-label="Redo" title="Redo"><Icon name="redo" /></button>
+            <button className="btn btn-sm btn-ghost" disabled={!trees.length} onClick={() => { commit([]); setSelectedId(null); notify('All trees cleared · Undo restores them'); }}>Clear all</button>
           </div>
         </div>
         <div className="canvas-area">
@@ -272,31 +242,30 @@ export function Designer({ street, seg, trees, setTrees, crownSize, setCrownSize
             onMoveLive={(id, u, v) => setTrees(trees.map((t) => (t.id === id ? { ...t, u, v } : t)))}
             onMoveEnd={(id, start) => { setPast((p) => [...p, trees.map((t) => (t.id === id ? { ...t, ...start } : t))]); setFuture([]); }}
           />
-          {armed && (
-            <div className="hint"><span className="sw" style={{ background: SPECIES_BY_ID[armed].color }} /> Click the street to plant <b>{SPECIES_BY_ID[armed].name}</b> · Esc to stop</div>
-          )}
-          {!armed && !trees.length && (
-            <div className="hint hint-soft">Pick a species in the library below, then click a footpath, median or parking lane to plant it.</div>
-          )}
           {selected && <Inspector tree={selected} street={street} crownSize={crownSize} onReplace={replace} onDelete={del} onClose={() => setSelectedId(null)} />}
         </div>
         <Library armed={armed} setArmed={(id) => { setArmed(id); if (id) setSelectedId(null); }} crownSize={crownSize} />
       </div>
       <aside className="d-side" aria-label="Design feedback">
         <div className="tabs" role="tablist">
-          {[['feedback', 'Live feedback'], ['scenarios', 'Scenarios'], ['schemes', 'Schemes'], ['method', 'Method']].map(([id, label]) => (
+          {[['feedback', 'Results'], ['scenarios', 'Targets'], ['schemes', 'Schemes A · B · C']].map(([id, label]) => (
             <button key={id} role="tab" aria-selected={tab === id} className={tab === id ? 'is-on' : ''} onClick={() => setTab(id)}>{label}</button>
           ))}
+          <button className="icon-btn tabs-info" onClick={() => setAboutOpen(true)} aria-label="Settings and method" title="Settings and method"><Icon name="info" /></button>
         </div>
         <div className="side-body">
-          {tab === 'feedback' && <FeedbackPanel street={street} seg={seg} trees={trees} metrics={metrics} crownSize={crownSize} viewSide={viewSide} setViewSide={setViewSide} warnings={warnings} />}
+          {tab === 'feedback' && <FeedbackPanel street={street} seg={seg} trees={trees} metrics={metrics} crownSize={crownSize} viewSide={viewSide} setViewSide={setViewSide} warnings={warnings} openAbout={() => setAboutOpen(true)} />}
           {tab === 'scenarios' && <ScenarioPanel street={street} seg={seg} crownSize={crownSize} viewSide={viewSide} currentTotal={Math.min(100, seg.gvi + metrics.gvi.pct)}
             onApply={(ts, sp) => { commit(ts); setTab('feedback'); notify(`Applied ${ts.length} × ${sp.name} · Undo to go back`, 'good'); }} />}
           {tab === 'schemes' && <SchemesPanel current={current} schemes={schemes} setSchemes={setSchemes} notify={notify} openExport={() => setExportOpen(true)}
             onLoad={(s) => { if (s.segId !== seg.id) goSegment(s.segId, s.streetId, s.trees); else commit(s.trees); setCrownSize(s.crownSize); notify(`Loaded scheme for ${s.streetName} ${s.segId}`); }} />}
-          {tab === 'method' && <MethodPanel crownSize={crownSize} />}
         </div>
       </aside>
+      {aboutOpen && (
+        <Modal title="Settings and method" onClose={() => setAboutOpen(false)} wide>
+          <MethodPanel crownSize={crownSize} setCrownSize={setCrownSize} showLabels={showLabels} setShowLabels={setShowLabels} showViewpoint={showViewpoint} setShowViewpoint={setShowViewpoint} />
+        </Modal>
+      )}
       {exportOpen && (
         <Modal title="Design summary" onClose={() => setExportOpen(false)} wide>
           <p className="fine">Markdown text with the current design and saved schemes. Copy it into a document, email or report.</p>
