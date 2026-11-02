@@ -1,5 +1,8 @@
 import { SPECIES, SPECIES_BY_ID, SHADE_CLASSES, RATING_RANGE, crownDiameter } from '../data/species.js';
-import { HEADINGS, DURATION_CURVE, levelLabel, scenarioFor, renderViews, FOLIAGE_DENSITY, EYE_HEIGHT, VIEW_FOV, minSpacing } from '../lib/metrics.js';
+import { HEADINGS, DURATION_CURVE, levelLabel, scenarioFor, renderViews, FOLIAGE_DENSITY, WINTER_DECIDUOUS_DENSITY, EYE_HEIGHT, VIEW_FOV, gviCanopyFit } from '../lib/metrics.js';
+import { SEGMENT_DATA } from '../data/segments.js';
+
+const FIT = gviCanopyFit(SEGMENT_DATA);
 import { Src, Chip, Icon, fmt } from './ui.jsx';
 
 const { useRef, useEffect, useState, useMemo } = React;
@@ -68,27 +71,37 @@ function Row({ label, value, unit, note, kind, bar, barCls }) {
   );
 }
 
-export function FeedbackPanel({ street, seg, trees, metrics, crownSize, viewSide, setViewSide, warnings, openAbout }) {
+export function FeedbackPanel({ street, seg, trees, metrics, crownSize, viewSide, setViewSide, warnings, openAbout, season, setSeason }) {
   const refs = [useRef(null), useRef(null), useRef(null), useRef(null)];
   const [showViews, setShowViews] = useState(false);
   const size = 112;
   useEffect(() => {
     if (!showViews) return undefined;
-    const id = requestAnimationFrame(() => renderViews(street, trees, SPECIES_BY_ID, crownSize, viewSide, refs.map((r) => r.current), RENDER_PALETTE, size));
+    const id = requestAnimationFrame(() => renderViews(street, trees, SPECIES_BY_ID, crownSize, viewSide, refs.map((r) => r.current), RENDER_PALETTE, size, season));
     return () => cancelAnimationFrame(id);
-  }, [street, trees, crownSize, viewSide, showViews]);
+  }, [street, trees, crownSize, viewSide, showViews, season]);
   const a = metrics.attrs;
   const n = trees.length;
   const total = Math.min(100, seg.gvi + metrics.gvi.pct);
+  const empirical = FIT.slope * metrics.canopy.pct;
+  const deciduous = trees.filter((t) => SPECIES_BY_ID[t.speciesId]?.leaf === 'Deciduous').length;
   return (
     <div className="feedback">
+      <div className="season">
+        <div className="seg-ctl" role="radiogroup" aria-label="Season">
+          <button role="radio" aria-checked={season === 'summer'} className={season === 'summer' ? 'is-on' : ''} onClick={() => setSeason('summer')}>Summer (leaf-on)</button>
+          <button role="radio" aria-checked={season === 'winter'} className={season === 'winter' ? 'is-on' : ''} onClick={() => setSeason('winter')}>Winter</button>
+        </div>
+        {season === 'winter' && <span className="fine">{deciduous ? `${deciduous} deciduous ${deciduous === 1 ? 'tree is' : 'trees are'} bare` : 'All trees are evergreen'}</span>}
+      </div>
       {!n && <p className="res-empty">Choose a tree below and click the street. Results appear here as you plant.</p>}
       <div className="results">
         <Row label="Trees" value={n} kind="calc" note={n ? a.species.join(', ') : null} />
         <Row label="Canopy cover" value={fmt(metrics.canopy.pct)} unit="%" kind="est" bar={metrics.canopy.pct}
           note={`Existing in this segment: ${seg.canopy}%`} />
         <Row label="Green View Index" value={`≈ ${fmt(total)}`} unit="%" kind="est" bar={total * 2.5} barCls="meter-gvi1"
-          note={`Measured today ${seg.gvi}% + your trees ≈ ${fmt(metrics.gvi.pct)}%`} />
+          note={<>{season === 'winter' ? `Measured (warm season) ${seg.gvi}% + your trees in winter ≈ ${fmt(metrics.gvi.pct)}%` : `Measured today ${seg.gvi}% + your trees ≈ ${fmt(metrics.gvi.pct)}%`}
+            {n > 0 && season === 'summer' && <><br />Cross-check from the 100 thesis segments: this canopy suggests about +{fmt(empirical)} points ({Math.abs(empirical - metrics.gvi.pct) <= 5 ? 'close to' : empirical > metrics.gvi.pct ? 'higher than' : 'lower than'} the 3D estimate)</>}</>} />
         <Row label="Water demand" value={n ? levelLabel(a.waterMean) : '—'} kind="thesis"
           note={n ? `Low ${a.water.Low} · Moderate ${a.water.Moderate} · High ${a.water.High}` : null} />
         <Row label="Climate suitability" value={n ? levelLabel(a.climateMean) : '—'} kind="thesis"
@@ -201,6 +214,8 @@ export function MethodPanel({ crownSize, setCrownSize, showLabels, setShowLabels
         <li><Src kind="assumption" /> Crown footprint: each species is drawn with the representative area of its Table 6.1 shade class. Current setting "{crownSize}": Small {SHADE_CLASSES.Small[crownSize]} m², Medium {SHADE_CLASSES.Medium[crownSize]} m², Large {SHADE_CLASSES.Large[crownSize]} m². Model height = 0.9 × crown diameter + 2 m; crown base ≥ 2.5 m.</li>
         <li><Src kind="estimate" /> Canopy cover = union of crown footprints inside the 20 m × street-width site (0.2 m grid), overlap counted once, matching the thesis approach for scenario canopy (§8.2.6).</li>
         <li><Src kind="estimate" /> GVI proxy: crowns as ellipsoids with {FOLIAGE_DENSITY * 100}% foliage density, façades as continuous walls, one viewpoint at {EYE_HEIGHT} m, four {VIEW_FOV}° views (vertical FOV assumed {VIEW_FOV}°). The total adds the measured warm-season GVI and ignores overlap with existing vegetation, so treat it as a design estimate pending calibration against the Mask2Former four-view method.</li>
+        <li><Src kind="estimate" /> GVI cross-check: across the 100 thesis segments (Table D.2), warm-season GVI ≈ {fmt(FIT.intercept, 1)} + {fmt(FIT.slope, 2)} × canopy % (least squares, R² = {fmt(FIT.r2, 2)}). The app multiplies the slope by your design's canopy to give a second, data-based estimate of added GVI. It explains about a third of the variation between segments, so treat it as a sense check, not a prediction.</li>
+        <li><Src kind="assumption" /> Winter view: deciduous species (leaf type from Appendix C1) are drawn with {WINTER_DECIDUOUS_DENSITY * 100}% foliage density instead of {FOLIAGE_DENSITY * 100}%. The measured GVI is a warm-season value; the thesis reports street means of 9.87% in winter vs 13.14% in late spring–early summer (Table 5.3).</li>
         <li><Src kind="demo" /> Lane, parking and median widths, and total reserve widths. Replace with surveyed cross-sections when available.</li>
       </ul>
     </div>

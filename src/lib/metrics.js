@@ -5,18 +5,32 @@ import { SEGMENT_LENGTH, zonesFor } from '../data/streets.js';
 export const EYE_HEIGHT = 1.6; // §8.2.2: camera at ~1.6 m
 export const VIEW_FOV = 90; // §8.2.2: four 90° horizontal views; vertical FOV assumed 90°
 export const FOLIAGE_DENSITY = 0.8; // app assumption
+export const WINTER_DECIDUOUS_DENSITY = 0.25; // app assumption: bare branches of deciduous trees in winter
+
+// Cross-check from thesis data: least-squares fit of warm-season GVI on 2022
+// canopy cover across the 100 segments of Table D.2 (computed in-app below).
+export function gviCanopyFit(rows) {
+  const n = rows.length;
+  const mx = rows.reduce((a, r) => a + r.canopy, 0) / n;
+  const my = rows.reduce((a, r) => a + r.gvi, 0) / n;
+  let sxy = 0, sxx = 0, syy = 0;
+  for (const r of rows) { sxy += (r.canopy - mx) * (r.gvi - my); sxx += (r.canopy - mx) ** 2; syy += (r.gvi - my) ** 2; }
+  const slope = sxy / sxx;
+  return { n, slope, intercept: my - slope * mx, r2: (sxy * sxy) / (sxx * syy) };
+}
 const TRUNK_R = 0.15;
 
-export function treeGeom(tree, sp, crownSize) {
+export function treeGeom(tree, sp, crownSize, season = 'summer') {
   const d = crownDiameter(sp, crownSize);
   const H = modelHeight(sp, crownSize);
   const base = Math.max(2.5, H * 0.35);
   const a = (H - base) / 2;
-  return { id: tree.id, u: tree.u, v: tree.v, r: d / 2, a, cz: base + a, base, H, sp, color: sp.color };
+  const dens = season === 'winter' && sp.leaf === 'Deciduous' ? WINTER_DECIDUOUS_DENSITY : FOLIAGE_DENSITY;
+  return { id: tree.id, u: tree.u, v: tree.v, r: d / 2, a, cz: base + a, base, H, sp, color: sp.color, dens };
 }
 
-function geoms(trees, speciesById, crownSize) {
-  return trees.filter((t) => speciesById[t.speciesId]).map((t) => treeGeom(t, speciesById[t.speciesId], crownSize));
+function geoms(trees, speciesById, crownSize, season) {
+  return trees.filter((t) => speciesById[t.speciesId]).map((t) => treeGeom(t, speciesById[t.speciesId], crownSize, season));
 }
 
 // ---------- placement rules (app rules, not thesis criteria) ----------
@@ -50,6 +64,7 @@ export function checkPlacement(street, u, v, trees, ignoreId, sp, crownSize) {
 
 // ---------- canopy (plan projection, overlap counted once) ----------
 export function canopyCover(street, trees, speciesById, crownSize, cell = 0.2) {
+  // plan footprint is the same in every season
   const W = street.width;
   const L = SEGMENT_LENGTH;
   const siteArea = W * L;
@@ -176,7 +191,9 @@ export function castView(street, g, vp, headingDeg, size, ctx, palette) {
         const t = rayCrown(vp.u, vp.v, EYE_HEIGHT, du, dv, dz, c);
         if (t >= 0 && t < tObs) hits.push([t, c]);
       }
-      green += 1 - Math.pow(1 - FOLIAGE_DENSITY, hits.length);
+      let trans = 1;
+      for (const h of hits) trans *= 1 - h[1].dens;
+      green += 1 - trans;
       if (!img) continue;
       let col;
       if (kind === 'sky') col = mix(palette.skyLow, palette.skyHigh, Math.min(1, Math.max(0, dz * 1.5)));
@@ -207,7 +224,7 @@ export function castView(street, g, vp, headingDeg, size, ctx, palette) {
           const n = hash(Math.floor(px * 2.5), Math.floor(py * 2.5), Math.floor(pz * 2.5));
           const shade = 0.55 + 0.55 * lam + (n - 0.5) * 0.3;
           const rgb = c.rgb || (c.rgb = hexRgb(c.color));
-          col = mix(col, rgb.map((v) => Math.min(255, v * shade)), FOLIAGE_DENSITY + (n - 0.5) * 0.2);
+          col = c.dens < FOLIAGE_DENSITY ? mix(col, palette.trunk, c.dens * 0.9 * (n > 0.4 ? 1 : 0.4)) : mix(col, rgb.map((v) => Math.min(255, v * shade)), c.dens + (n - 0.5) * 0.2);
         }
       }
       const o = (y * size + x) * 4;
@@ -220,16 +237,16 @@ export function castView(street, g, vp, headingDeg, size, ctx, palette) {
 
 // Four-view GVI proxy for the trees in the design (mirrors the §8.2.2 protocol:
 // one point, four 90° views, mean of the four).
-export function gviProxy(street, trees, speciesById, crownSize, side = 0, size = 44) {
-  const g = geoms(trees, speciesById, crownSize);
+export function gviProxy(street, trees, speciesById, crownSize, side = 0, size = 44, season = 'summer') {
+  const g = geoms(trees, speciesById, crownSize, season);
   if (!g.length) return { pct: 0, views: [0, 0, 0, 0] };
   const vp = viewpointFor(street, side);
   const views = HEADINGS.map((hd) => castView(street, g, vp, hd.deg, size));
   return { pct: views.reduce((a, b) => a + b, 0) / 4, views };
 }
 
-export function renderViews(street, trees, speciesById, crownSize, side, canvases, palette, size) {
-  const g = geoms(trees, speciesById, crownSize);
+export function renderViews(street, trees, speciesById, crownSize, side, canvases, palette, size, season = 'summer') {
+  const g = geoms(trees, speciesById, crownSize, season);
   const vp = viewpointFor(street, side);
   return HEADINGS.map((hd, i) => {
     const cv = canvases[i];

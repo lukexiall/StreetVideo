@@ -522,3 +522,58 @@ details.panel.fold { border-top: 1px solid var(--line); padding-top: 16px; }
 .sp-card { padding: 6px 8px; gap: 6px; }
 .sp-meta { font-size: 11px; }
 .sd-grid { grid-template-columns: minmax(0, 680px); align-items: start; }
+
+/* ---------- whole-street view ---------- */
+.view-toggle { grid-template-columns: repeat(2, auto); justify-content: start; margin-top: 10px; }
+.view-toggle button { padding: 7px 16px; font-family: var(--font-body); font-size: 13.5px; }
+.corridor { display: grid; gap: 14px; min-width: 0; }
+.cor-controls { display: grid; gap: 8px; }
+.cor-modes { grid-template-columns: repeat(5, minmax(0, 1fr)); max-width: 720px; margin-top: 0; }
+.cor-modes button { font-family: var(--font-body); font-size: 13.5px; }
+.cor-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.cor-stats > div { border: 1px solid var(--line); border-radius: var(--r); background: var(--surface); padding: 10px 12px; display: grid; gap: 2px; }
+.cor-stats span { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-3); font-weight: 600; }
+.cor-stats b { font-family: var(--font-mono); font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.cor-stats small { font-size: 11.5px; color: var(--ink-3); }
+.cp-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--r); background: var(--surface); }
+.cp { display: block; width: 100%; min-width: 760px; height: auto; }
+.cp-hit { fill: transparent; cursor: pointer; }
+.cp-seg:hover .cp-hit { fill: rgba(183, 122, 31, 0.08); }
+.cp-seg.is-sel .cp-hit { fill: rgba(183, 122, 31, 0.16); stroke: var(--ochre); stroke-width: 0.3; }
+.cp-div { stroke: var(--ink-3); stroke-width: 0.12; stroke-dasharray: 0.8 0.6; }
+.cp-id { font-size: 1.7px; font-family: var(--font-mono); fill: var(--ink-3); pointer-events: none; }
+.cp-star { fill: var(--ochre); pointer-events: none; }
+.cp-star-key { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--ochre); margin-left: 2px; }
+.cp-tree { fill-opacity: 0.72; stroke: rgba(0, 0, 0, 0.25); stroke-width: 0.12; pointer-events: none; }
+.gb { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; overflow-x: auto; }
+.gb-svg { width: 100%; min-width: 700px; height: 120px; display: block; }
+.gb-grid { stroke: var(--line); stroke-width: 1; }
+.gb-ref { stroke: var(--ochre); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.gb-hit { fill: transparent; cursor: pointer; }
+.gb-col:hover .gb-hit, .gb-col.is-sel .gb-hit { fill: var(--surface-2); }
+.gb-exist { fill: var(--thesis); }
+.gb-add { fill: var(--ochre); }
+.gb-axis { display: flex; flex-direction: column; justify-content: space-between; font-size: 10px; color: var(--ink-3); font-family: var(--font-mono); padding: 2px 0 14px; white-space: nowrap; }
+.cor-sel { gap: 6px; }
+.cor-adopt { display: flex; gap: 8px; flex-wrap: wrap; }
+tr.is-cur td { background: var(--accent-soft); font-weight: 600; }
+
+/* decision path */
+.dpath { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
+.dpath li { display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 10px; padding: 8px 0; position: relative; }
+.dpath li:not(:last-child):not(.dp-src)::after { content: ''; position: absolute; left: 12px; top: 34px; bottom: -6px; width: 2px; background: var(--line); }
+.dp-n { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-family: var(--font-mono); font-size: 12px; font-weight: 700; background: var(--surface-2); color: var(--ink-3); position: relative; z-index: 1; }
+.dpath li.is-done .dp-n { background: var(--accent); color: var(--accent-ink); }
+.dpath li.is-stop .dp-n { background: var(--ochre-soft); color: var(--ochre); }
+.dpath li.is-off { opacity: 0.45; }
+.dpath b { font-size: 13px; }
+.dpath p { font-size: 12.5px; color: var(--ink-2); }
+.dpath .dp-src { display: block; padding-top: 2px; }
+
+/* season */
+.season { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+@media (max-width: 700px) {
+  .cor-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cor-modes { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}

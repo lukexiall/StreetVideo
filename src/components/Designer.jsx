@@ -57,10 +57,10 @@ function Inspector({ tree, street, crownSize, onReplace, onDelete, onClose }) {
   );
 }
 
-export function computeMetrics(street, trees, crownSize, viewSide) {
+export function computeMetrics(street, trees, crownSize, viewSide, season = 'summer') {
   return {
     canopy: canopyCover(street, trees, SPECIES_BY_ID, crownSize),
-    gvi: gviProxy(street, trees, SPECIES_BY_ID, crownSize, viewSide),
+    gvi: gviProxy(street, trees, SPECIES_BY_ID, crownSize, viewSide, 44, season),
     attrs: attributeSummary(trees, SPECIES_BY_ID),
   };
 }
@@ -156,6 +156,7 @@ export function Designer({ street, seg, trees, setTrees, crownSize, setCrownSize
   const [tab, setTab] = useState('feedback');
   const [aboutOpen, setAboutOpen] = useState(false);
   const [viewSide, setViewSide] = useState(0);
+  const [season, setSeason] = useState('summer');
   const [showLabels, setShowLabels] = useState(false);
   const [showViewpoint, setShowViewpoint] = useState(false);
   const [past, setPast] = useState([]);
@@ -191,7 +192,7 @@ export function Designer({ street, seg, trees, setTrees, crownSize, setCrownSize
     return () => window.removeEventListener('keydown', k);
   });
 
-  const metrics = useMemo(() => computeMetrics(street, trees, crownSize, viewSide), [street, trees, crownSize, viewSide]);
+  const metrics = useMemo(() => computeMetrics(street, trees, crownSize, viewSide, season), [street, trees, crownSize, viewSide, season]);
   const warnings = useMemo(() => {
     const w = [];
     trees.forEach((t, i) => {
@@ -202,7 +203,7 @@ export function Designer({ street, seg, trees, setTrees, crownSize, setCrownSize
     return w;
   }, [street, trees, crownSize]);
 
-  const current = { streetId: street.id, streetName: street.name, segId: seg.id, existingGvi: seg.gvi, existingCanopy: seg.canopy, trees, crownSize, metrics };
+  const current = { streetId: street.id, streetName: street.name, segId: seg.id, existingGvi: seg.gvi, existingCanopy: seg.canopy, trees, crownSize, metrics: season === 'summer' ? metrics : computeMetrics(street, trees, crownSize, viewSide) };
   const selected = trees.find((t) => t.id === selectedId);
   const idx = street.segments.findIndex((s) => s.id === seg.id);
 
@@ -254,7 +255,7 @@ export function Designer({ street, seg, trees, setTrees, crownSize, setCrownSize
           <button className="icon-btn tabs-info" onClick={() => setAboutOpen(true)} aria-label="Settings and method" title="Settings and method"><Icon name="info" /></button>
         </div>
         <div className="side-body">
-          {tab === 'feedback' && <FeedbackPanel street={street} seg={seg} trees={trees} metrics={metrics} crownSize={crownSize} viewSide={viewSide} setViewSide={setViewSide} warnings={warnings} openAbout={() => setAboutOpen(true)} />}
+          {tab === 'feedback' && <FeedbackPanel street={street} seg={seg} trees={trees} metrics={metrics} crownSize={crownSize} viewSide={viewSide} setViewSide={setViewSide} warnings={warnings} openAbout={() => setAboutOpen(true)} season={season} setSeason={setSeason} />}
           {tab === 'scenarios' && <ScenarioPanel street={street} seg={seg} crownSize={crownSize} viewSide={viewSide} currentTotal={Math.min(100, seg.gvi + metrics.gvi.pct)}
             onApply={(ts, sp) => { commit(ts); setTab('feedback'); notify(`Applied ${ts.length} × ${sp.name} · Undo to go back`, 'good'); }} />}
           {tab === 'schemes' && <SchemesPanel current={current} schemes={schemes} setSchemes={setSchemes} notify={notify} openExport={() => setExportOpen(true)}

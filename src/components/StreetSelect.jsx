@@ -1,5 +1,7 @@
 import { STREETS, zonesFor } from '../data/streets.js';
-import { Icon, Chip, Src, fmt } from './ui.jsx';
+import { Icon, Chip, fmt } from './ui.jsx';
+import { Corridor } from './Corridor.jsx';
+import { SPECIES_BY_NAME } from '../data/species.js';
 
 const { useState } = React;
 
@@ -28,7 +30,30 @@ export function CrossSection({ street, height = 54 }) {
   );
 }
 
-export function StreetSelect({ onDesign, initialStreet, onStreet }) {
+function DecisionPath({ seg }) {
+  const d = seg.decision;
+  const sp = d && SPECIES_BY_NAME[d.species];
+  const steps = [
+    { k: 'Right place', ok: seg.shortlist, text: seg.shortlist ? `Top-20 priority: PGPI ${seg.pgpi}, rank ${seg.rank} of 100` : `Not in the top 20 (PGPI ${seg.pgpi}, rank ${seg.rank}). The thesis carried only the top 20 forward.` },
+    { k: 'Role', ok: !!d, text: d ? `${d.role}-oriented: ${d.stay}% of people stayed ≥ 2 min (LI ${d.li}; shortlist median 13.0). ${d.role === 'Support' ? 'Planting supports existing staying.' : 'Planting helps create reasons to stay.'}` : '—' },
+    { k: 'Can a tree fit?', ok: !!d, text: d ? `${d.feasibility}. ${d.rationale}` : '—' },
+    { k: 'Right species', ok: !!d, text: d ? `${d.action}: ${d.species}${sp ? ` (${sp.shade.toLowerCase()} canopy, water ${sp.water.toLowerCase()}, climate suitability ${sp.climate.toLowerCase()})` : ''}` : '—' },
+  ];
+  return (
+    <ol className="dpath">
+      {steps.map((st, i) => (
+        <li key={st.k} className={st.ok ? 'is-done' : i === 0 ? 'is-stop' : 'is-off'}>
+          <span className="dp-n">{i + 1}</span>
+          <div><b>{st.k}</b><p>{st.text}</p></div>
+        </li>
+      ))}
+      <li className="dp-src fine">Thesis Chapter 8 framework · Tables D.1–D.3</li>
+    </ol>
+  );
+}
+
+export function StreetSelect({ onDesign, initialStreet, onStreet, crownSize, designs, onOpenSegment, onAdopt }) {
+  const [view, setView] = useState('segments');
   const [streetId, setStreetId] = useState(initialStreet || 'hindley');
   const [metric, setMetric] = useState('gvi');
   const street = STREETS.find((s) => s.id === streetId);
@@ -62,18 +87,24 @@ export function StreetSelect({ onDesign, initialStreet, onStreet }) {
       <section className="street-detail">
         <header className="sd-head">
           <div>
-            <p className="eyebrow">Step 2 · Choose a 20 m segment</p>
             <h2>{street.name}</h2>
+            <div className="target-chips view-toggle" role="radiogroup" aria-label="View">
+              <button role="radio" aria-checked={view === 'segments'} className={view === 'segments' ? 'is-on' : ''} onClick={() => setView('segments')}>One segment</button>
+              <button role="radio" aria-checked={view === 'street'} className={view === 'street' ? 'is-on' : ''} onClick={() => setView('street')}>Whole street</button>
+            </div>
           </div>
-          <div className="seg-metric" role="radiogroup" aria-label="Colour segments by">
+          {view === 'segments' && <div className="seg-metric" role="radiogroup" aria-label="Colour segments by">
             {METRICS.map((x) => (
               <button key={x.id} role="radio" aria-checked={metric === x.id} className={`seg-pill ${metric === x.id ? 'is-on' : ''}`} onClick={() => setMetric(x.id)}>
                 {x.label}
               </button>
             ))}
-          </div>
+          </div>}
         </header>
 
+        {view === 'street' ? (
+          <Corridor street={street} crownSize={crownSize} designs={designs} onOpenSegment={(id, trees) => onOpenSegment(street.id, id, trees)} onAdopt={(rows) => onAdopt(rows)} />
+        ) : (<>
         <div className="strip-wrap">
           <div className="strip" style={{ gridTemplateColumns: `repeat(${street.segments.length}, minmax(0, 1fr))` }}>
             {street.segments.map((s) => {
@@ -115,13 +146,7 @@ export function StreetSelect({ onDesign, initialStreet, onStreet }) {
                   <div><dt>Canopy cover (2022 LiDAR)</dt><dd>{seg.canopy}%</dd></div>
                   <div><dt>Priority score (PGPI)</dt><dd>{seg.pgpi}</dd></div>
                 </dl>
-                {seg.decision && (
-                  <div className="decision">
-                    <h4>Thesis recommendation</h4>
-                    <p>{seg.decision.action} <b>{seg.decision.species}</b> · {seg.decision.role}-oriented · {seg.decision.feasibility}</p>
-                    <p className="fine">{seg.decision.rationale} (Table D.1)</p>
-                  </div>
-                )}
+                <DecisionPath seg={seg} />
                 <button className="btn btn-primary btn-lg" onClick={() => onDesign(street.id, seg.id)}>
                   Design segment {seg.id} <Icon name="arrow" size={18} />
                 </button>
@@ -146,6 +171,7 @@ export function StreetSelect({ onDesign, initialStreet, onStreet }) {
             </p>
           </details>
         </div>
+        </>)}
       </section>
     </div>
   );

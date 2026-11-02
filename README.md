@@ -24,3 +24,10 @@ npm run build
 | Street summaries, footpath width, H/W | Tables 8.2, 5.3 |
 
 Not in the thesis text, so left blank or modelled: per-species mature height and crown spread (not shown as data); crown footprint drawn from the shade-class area range; lane/parking/median widths are demonstration geometry. Canopy and GVI in the designer are design estimates, not measurements.
+
+## v0.2 additions
+
+- **Whole street** view (Streets → Whole street): Existing / Minimal / Balanced / Maximum / My designs for all segments of a street, with trees added, mean canopy, mean GVI and segments reaching ~20% GVI, compared with Table 8.4 where the thesis has values (Hindley, Gouger). The layout rules are app rules (the thesis does not publish tree positions).
+- **Decision path** for each segment: Right place (PGPI) → Role (LI) → Feasibility → Species, from Tables D.1–D.3.
+- **GVI cross-check**: slope of warm-season GVI on 2022 canopy across the 100 segments of Table D.2 (≈ 0.31 GVI points per canopy %, R² ≈ 0.33), shown beside the 3D design estimate.
+- **Summer / winter** toggle: deciduous species (leaf type, Appendix C1) drawn bare in winter (app assumption: 25% foliage density).

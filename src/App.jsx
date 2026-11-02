@@ -80,7 +80,9 @@ export function App() {
       )}
       <main className="stage">
         {view === 'home' && <HomeMap onOpenSA={() => setView('streets')} />}
-        {view === 'streets' && <StreetSelect initialStreet={streetId} onStreet={setStreetId} onDesign={(sid, id) => goSegment(id, sid)} />}
+        {view === 'streets' && <StreetSelect initialStreet={streetId} onStreet={setStreetId} onDesign={(sid, id) => goSegment(id, sid)} crownSize={crownSize} designs={designs}
+            onOpenSegment={(sid, id, t) => goSegment(id, sid, t || undefined)}
+            onAdopt={(rows) => { setDesigns((d) => { const n = { ...d }; rows.forEach((r) => { n[r.seg.id] = r.trees; }); return n; }); notify(`Layout copied into your designs for ${rows.length} segments`, 'good'); }} />}
         {view === 'design' && (
           <Designer key={street.id} street={street} seg={seg} trees={trees} setTrees={setTrees} crownSize={crownSize} setCrownSize={setCrownSize}
             schemes={schemes} setSchemes={setSchemes} notify={notify} goSegment={goSegment} openStreet={() => setView('streets')} />
