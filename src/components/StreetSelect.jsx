@@ -1,6 +1,7 @@
 import { STREETS, zonesFor } from '../data/streets.js';
 import { Icon, Chip, fmt } from './ui.jsx';
 import { Corridor } from './Corridor.jsx';
+import { MapView } from './MapView.jsx';
 import { SPECIES_BY_NAME } from '../data/species.js';
 
 const { useState } = React;
@@ -91,6 +92,7 @@ export function StreetSelect({ onDesign, initialStreet, onStreet, crownSize, des
             <div className="target-chips view-toggle" role="radiogroup" aria-label="View">
               <button role="radio" aria-checked={view === 'segments'} className={view === 'segments' ? 'is-on' : ''} onClick={() => setView('segments')}>One segment</button>
               <button role="radio" aria-checked={view === 'street'} className={view === 'street' ? 'is-on' : ''} onClick={() => setView('street')}>Whole street</button>
+              <button role="radio" aria-checked={view === 'map'} className={view === 'map' ? 'is-on' : ''} onClick={() => setView('map')}>Map</button>
             </div>
           </div>
           {view === 'segments' && <div className="seg-metric" role="radiogroup" aria-label="Colour segments by">
@@ -102,7 +104,9 @@ export function StreetSelect({ onDesign, initialStreet, onStreet, crownSize, des
           </div>}
         </header>
 
-        {view === 'street' ? (
+        {view === 'map' ? (
+          <MapView streetId={streetId} onPickStreet={(id) => { setStreetId(id); setSegId(null); onStreet && onStreet(id); }} />
+        ) : view === 'street' ? (
           <Corridor street={street} crownSize={crownSize} designs={designs} onOpenSegment={(id, trees) => onOpenSegment(street.id, id, trees)} onAdopt={(rows) => onAdopt(rows)} />
         ) : (<>
         <div className="strip-wrap">

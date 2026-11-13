@@ -2,12 +2,15 @@
   "name": "streettree-studio",
   "version": "0.1.0",
   "private": true,
-  "description": "StreetTree Studio \u2013 interactive street tree design tool for Adelaide (PhD research prototype)",
+  "description": "StreetTree Studio – interactive street tree design tool for Adelaide (PhD research prototype)",
   "scripts": {
     "build": "node build.mjs"
   },
   "devDependencies": {
     "esbuild": "0.24.0"
   },
-  "type": "module"
+  "type": "module",
+  "dependencies": {
+    "leaflet": "^1.9.4"
+  }
 }
