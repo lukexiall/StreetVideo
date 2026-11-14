@@ -3,12 +3,15 @@ import { crownDiameter } from '../data/species.js';
 import { checkPlacement, viewpointFor } from '../lib/metrics.js';
 import { TreeGlyph, GlyphDefs } from './TreeGlyph.jsx';
 import { Icon } from './ui.jsx';
+import { BaseTiles, Attribution } from './BaseMap.jsx';
 
 const { useState, useRef, useEffect, useCallback } = React;
 
 const ZONE_SHORT = { footpath: 'Footpath', parking: 'Parking', lane: 'Lane', median: 'Median' };
 
-export function PlanCanvas({ street, species, speciesById, trees, selectedId, armed, crownSize, showLabels, showViewpoint, viewSide, onAdd, onMoveLive, onMoveEnd, onSelect, notify }) {
+export function PlanCanvas({ street, seg, species, speciesById, trees, selectedId, armed, crownSize, showLabels, showViewpoint, viewSide, onAdd, onMoveLive, onMoveEnd, onSelect, notify, baseLayer = 'drawing', frame, align, onTileFail }) {
+  const mapBase = frame && baseLayer !== 'drawing' ? baseLayer : 'drawing';
+  const segStart = ((seg?.index || 1) - 1) * SEGMENT_LENGTH;
   const svgRef = useRef(null);
   const W = street.width;
   const base = { x: -4, y: -3.2, w: W + 8, h: SEGMENT_LENGTH + 6.4 };
@@ -115,11 +118,12 @@ export function PlanCanvas({ street, species, speciesById, trees, selectedId, ar
   const lanes = zones.filter((z) => z.kind === 'lane');
 
   return (
-    <div className={`plan ${armed ? 'is-armed' : ''}`}>
+    <div className={`plan ${armed ? 'is-armed' : ''} ${mapBase !== 'drawing' ? 'has-base' : ''}`}>
       <svg ref={svgRef} className="plan-svg" viewBox={`${vb.x} ${vb.y} ${vb.w} ${vb.h}`} preserveAspectRatio="xMidYMid meet"
         onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerLeave={() => setGhost(null)}
         role="application" aria-label={`Plan of ${street.name} segment`}>
         <GlyphDefs species={species} />
+        <BaseTiles frame={frame} align={align} width={W} base={mapBase} zoom={19} toGeo={(sx, sy) => [segStart + sy, sx]} x0={-8} x1={W + 8} y0={-8} y1={SEGMENT_LENGTH + 8} onFail={onTileFail} />
         {/* buildings */}
         <rect x={-40} y={-40} width={40} height={SEGMENT_LENGTH + 80} className="pl-bld" />
         <rect x={W} y={-40} width={40} height={SEGMENT_LENGTH + 80} className="pl-bld" />
@@ -191,6 +195,7 @@ export function PlanCanvas({ street, species, speciesById, trees, selectedId, ar
         </g>
         <text x={0} y={SEGMENT_LENGTH + 2.1} className="pl-dim">20 m segment · along-street {street.orientation}</text>
       </svg>
+      <Attribution base={mapBase} />
       <div className="zoom-ctl">
         <button className="icon-btn" onClick={() => zoom(1 / 1.25)} aria-label="Zoom in"><Icon name="plus" /></button>
         <button className="icon-btn" onClick={() => zoom(1.25)} aria-label="Zoom out"><Icon name="minus" /></button>

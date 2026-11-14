@@ -5,6 +5,7 @@ import { PlanCanvas } from './PlanCanvas.jsx';
 import { FeedbackPanel, ScenarioPanel, MethodPanel } from './Panels.jsx';
 import { SpeciesIcon } from './TreeGlyph.jsx';
 import { Icon, Chip, Modal, CopyBox, fmt } from './ui.jsx';
+import { BaseControls } from './BaseMap.jsx';
 
 const { useState, useMemo, useEffect, useCallback } = React;
 
@@ -150,7 +151,8 @@ function SchemesPanel({ current, schemes, setSchemes, onLoad, notify, openExport
   );
 }
 
-export function Designer({ street, seg, trees, setTrees, crownSize, setCrownSize, schemes, setSchemes, notify, goSegment, openStreet }) {
+export function Designer({ street, seg, trees, setTrees, crownSize, setCrownSize, schemes, setSchemes, notify, goSegment, openStreet, mapProps }) {
+  const [tileFail, setTileFail] = useState(false);
   const [armed, setArmed] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
   const [tab, setTab] = useState('feedback');
@@ -226,13 +228,14 @@ export function Designer({ street, seg, trees, setTrees, crownSize, setCrownSize
             )}
           </div>
           <div className="tb-group">
+            <BaseControls street={street} base={mapProps.base} setBase={mapProps.setBase} align={mapProps.aligns[street.id]} setAlign={(a) => mapProps.setAlign(street.id, a)} geo={mapProps.geo} failed={tileFail} />
             <button className="icon-btn" onClick={undo} disabled={!past.length} aria-label="Undo" title="Undo"><Icon name="undo" /></button>
             <button className="icon-btn" onClick={redo} disabled={!future.length} aria-label="Redo" title="Redo"><Icon name="redo" /></button>
             <button className="btn btn-sm btn-ghost" disabled={!trees.length} onClick={() => { commit([]); setSelectedId(null); notify('All trees cleared · Undo restores them'); }}>Clear all</button>
           </div>
         </div>
         <div className="canvas-area">
-          <PlanCanvas street={street} species={SPECIES} speciesById={SPECIES_BY_ID} trees={trees} selectedId={selectedId} armed={armed} crownSize={crownSize}
+          <PlanCanvas street={street} seg={seg} baseLayer={mapProps.base} frame={mapProps.geo.frames[street.id]} align={mapProps.aligns[street.id]} onTileFail={() => setTileFail(true)} species={SPECIES} speciesById={SPECIES_BY_ID} trees={trees} selectedId={selectedId} armed={armed} crownSize={crownSize}
             showLabels={showLabels} showViewpoint={showViewpoint} viewSide={viewSide} notify={notify}
             onSelect={(id) => { setSelectedId(id); if (id) setArmed(null); }}
             onAdd={(u, v, w) => {

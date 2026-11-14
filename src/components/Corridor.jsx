@@ -2,6 +2,7 @@ import { SPECIES, SPECIES_BY_ID, crownDiameter } from '../data/species.js';
 import { SEGMENT_LENGTH, zonesFor } from '../data/streets.js';
 import { SCENARIOS, GVI_REFERENCE, THESIS_T84, corridorScenario } from '../lib/corridor.js';
 import { Icon, fmt } from './ui.jsx';
+import { BaseTiles, BaseControls, Attribution } from './BaseMap.jsx';
 import { gviCanopyFit } from '../lib/metrics.js';
 import { SEGMENT_DATA } from '../data/segments.js';
 
@@ -10,13 +11,14 @@ const FIT = gviCanopyFit(SEGMENT_DATA);
 const { useState, useMemo } = React;
 
 // Long plan of the whole street: every segment side by side, trees as circles.
-function CorridorPlan({ street, result, crownSize, selected, onPick }) {
+function CorridorPlan({ street, result, crownSize, selected, onPick, mapBase, frame, align, onTileFail }) {
   const W = street.width;
   const L = street.segments.length * SEGMENT_LENGTH;
   const zones = zonesFor(street);
   return (
-    <div className="cp-wrap">
+    <div className={`cp-wrap ${mapBase !== 'drawing' ? 'has-base' : ''}`}>
       <svg viewBox={`-2 -6 ${L + 4} ${W + 8}`} className="cp" role="img" aria-label={`Plan of ${street.name} with the selected scenario`}>
+        <BaseTiles frame={frame} align={align} width={W} base={mapBase} zoom={18} toGeo={(sx, sy) => [sx, sy]} x0={-4} x1={L + 4} y0={-8} y1={W + 4} onFail={onTileFail} />
         {zones.map((z) => <rect key={z.i} x={0} y={z.u0} width={L} height={z.width} className={`pl-${z.kind}`} />)}
         {result.rows.map((r, i) => (
           <g key={r.seg.id} className={`cp-seg ${r.seg.shortlist ? 'is-short' : ''} ${selected === r.seg.id ? 'is-sel' : ''}`} onClick={() => onPick(r.seg.id)}>
@@ -31,6 +33,7 @@ function CorridorPlan({ street, result, crownSize, selected, onPick }) {
           </g>
         ))}
       </svg>
+      <Attribution base={mapBase} />
     </div>
   );
 }
@@ -58,7 +61,10 @@ function GviBars({ result, selected, onPick }) {
   );
 }
 
-export function Corridor({ street, crownSize, designs, onOpenSegment, onAdopt }) {
+export function Corridor({ street, crownSize, designs, onOpenSegment, onAdopt, mapProps }) {
+  const [failed, setFailed] = useState(false);
+  const frame = mapProps.geo.frames[street.id];
+  const mapBase = frame && mapProps.base !== 'drawing' ? mapProps.base : 'drawing';
   const [mode, setMode] = useState('balanced');
   const [fallbackId, setFallbackId] = useState('chinese-elm');
   const [selected, setSelected] = useState(null);
@@ -94,7 +100,8 @@ export function Corridor({ street, crownSize, designs, onOpenSegment, onAdopt })
         <div><span>Segments ≥ 20% GVI</span><b>{result.reaching} / {result.rows.length}</b><small>Today {street.segments.filter((s) => s.gvi >= GVI_REFERENCE).length}</small></div>
       </div>
 
-      <CorridorPlan street={street} result={result} crownSize={crownSize} selected={selected} onPick={setSelected} />
+      <BaseControls street={street} base={mapProps.base} setBase={mapProps.setBase} align={mapProps.aligns[street.id]} setAlign={(a) => mapProps.setAlign(street.id, a)} geo={mapProps.geo} failed={failed} />
+      <CorridorPlan street={street} result={result} crownSize={crownSize} selected={selected} onPick={setSelected} mapBase={mapBase} frame={frame} align={mapProps.aligns[street.id]} onTileFail={() => setFailed(true)} />
       <GviBars result={result} selected={selected} onPick={setSelected} />
       <p className="legend-line"><i className="dot dot-thesis" />Measured GVI <i className="dot dot-est" />Added by this scenario (design estimate) <i className="cp-star-key" />Top-20 priority segment · Click any segment for details</p>
 

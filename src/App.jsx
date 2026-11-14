@@ -6,6 +6,7 @@ import { Designer } from './components/Designer.jsx';
 import { SpeciesDB } from './components/SpeciesDB.jsx';
 import { Visualise } from './components/Visualise.jsx';
 import { Toast, useToast } from './components/ui.jsx';
+import { useStreetFrames } from './components/BaseMap.jsx';
 
 const { useState, useEffect } = React;
 
@@ -28,6 +29,10 @@ export function App() {
   const [designs, setDesigns] = useState(() => load('designs', {}));
   const [schemes, setSchemes] = useState(() => load('schemes', {}));
   const [crownSize, setCrownSize] = useState(() => load('crown', 'lower'));
+  const [base, setBase] = useState(() => load('base', 'satellite'));
+  const [aligns, setAligns] = useState(() => load('aligns', {}));
+  const geo = useStreetFrames();
+  const mapProps = { base, setBase, aligns, setAlign: (id, a) => setAligns((x) => ({ ...x, [id]: a })), geo };
   const [toast, notify] = useToast();
 
   useEffect(() => save('view', view), [view]);
@@ -36,6 +41,8 @@ export function App() {
   useEffect(() => save('designs', designs), [designs]);
   useEffect(() => save('schemes', schemes), [schemes]);
   useEffect(() => save('crown', crownSize), [crownSize]);
+  useEffect(() => save('base', base), [base]);
+  useEffect(() => save('aligns', aligns), [aligns]);
 
   const street = STREET_BY_ID[streetId] || STREETS[0];
   const seg = street.segments.find((s) => s.id === segId) || street.segments[0];
@@ -82,10 +89,11 @@ export function App() {
         {view === 'home' && <HomeMap onOpenSA={() => setView('streets')} />}
         {view === 'streets' && <StreetSelect initialStreet={streetId} onStreet={setStreetId} onDesign={(sid, id) => goSegment(id, sid)} crownSize={crownSize} designs={designs}
             onOpenSegment={(sid, id, t) => goSegment(id, sid, t || undefined)}
+            mapProps={mapProps}
             onAdopt={(rows) => { setDesigns((d) => { const n = { ...d }; rows.forEach((r) => { n[r.seg.id] = r.trees; }); return n; }); notify(`Layout copied into your designs for ${rows.length} segments`, 'good'); }} />}
         {view === 'design' && (
           <Designer key={street.id} street={street} seg={seg} trees={trees} setTrees={setTrees} crownSize={crownSize} setCrownSize={setCrownSize}
-            schemes={schemes} setSchemes={setSchemes} notify={notify} goSegment={goSegment} openStreet={() => setView('streets')} />
+            schemes={schemes} setSchemes={setSchemes} notify={notify} goSegment={goSegment} openStreet={() => setView('streets')} mapProps={mapProps} />
         )}
         {view === 'species' && <SpeciesDB />}
         {view === 'visualise' && <Visualise />}

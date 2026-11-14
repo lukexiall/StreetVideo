@@ -9,8 +9,5 @@
   "devDependencies": {
     "esbuild": "0.24.0"
   },
-  "type": "module",
-  "dependencies": {
-    "leaflet": "^1.9.4"
-  }
+  "type": "module"
 }

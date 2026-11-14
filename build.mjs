@@ -17,7 +17,7 @@ const result = await build({
   logLevel: 'warning',
 });
 const js = result.outputFiles[0].text.replace(/<\/script/gi, '<\\/script');
-const css = readFileSync('node_modules/leaflet/dist/leaflet.css', 'utf8') + '\n' + readFileSync('src/styles.css', 'utf8');
+const css = readFileSync('src/styles.css', 'utf8');
 
 const head = `<title>StreetTree Studio</title>
 <meta name="claude:viewport-fit-sides" content="cover">

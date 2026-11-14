@@ -1,7 +1,6 @@
 import { STREETS, zonesFor } from '../data/streets.js';
 import { Icon, Chip, fmt } from './ui.jsx';
 import { Corridor } from './Corridor.jsx';
-import { MapView } from './MapView.jsx';
 import { SPECIES_BY_NAME } from '../data/species.js';
 
 const { useState } = React;
@@ -53,7 +52,7 @@ function DecisionPath({ seg }) {
   );
 }
 
-export function StreetSelect({ onDesign, initialStreet, onStreet, crownSize, designs, onOpenSegment, onAdopt }) {
+export function StreetSelect({ onDesign, initialStreet, onStreet, crownSize, designs, onOpenSegment, onAdopt, mapProps }) {
   const [view, setView] = useState('segments');
   const [streetId, setStreetId] = useState(initialStreet || 'hindley');
   const [metric, setMetric] = useState('gvi');
@@ -92,7 +91,6 @@ export function StreetSelect({ onDesign, initialStreet, onStreet, crownSize, des
             <div className="target-chips view-toggle" role="radiogroup" aria-label="View">
               <button role="radio" aria-checked={view === 'segments'} className={view === 'segments' ? 'is-on' : ''} onClick={() => setView('segments')}>One segment</button>
               <button role="radio" aria-checked={view === 'street'} className={view === 'street' ? 'is-on' : ''} onClick={() => setView('street')}>Whole street</button>
-              <button role="radio" aria-checked={view === 'map'} className={view === 'map' ? 'is-on' : ''} onClick={() => setView('map')}>Map</button>
             </div>
           </div>
           {view === 'segments' && <div className="seg-metric" role="radiogroup" aria-label="Colour segments by">
@@ -104,10 +102,8 @@ export function StreetSelect({ onDesign, initialStreet, onStreet, crownSize, des
           </div>}
         </header>
 
-        {view === 'map' ? (
-          <MapView streetId={streetId} onPickStreet={(id) => { setStreetId(id); setSegId(null); onStreet && onStreet(id); }} />
-        ) : view === 'street' ? (
-          <Corridor street={street} crownSize={crownSize} designs={designs} onOpenSegment={(id, trees) => onOpenSegment(street.id, id, trees)} onAdopt={(rows) => onAdopt(rows)} />
+        {view === 'street' ? (
+          <Corridor street={street} crownSize={crownSize} designs={designs} onOpenSegment={(id, trees) => onOpenSegment(street.id, id, trees)} onAdopt={(rows) => onAdopt(rows)} mapProps={mapProps} />
         ) : (<>
         <div className="strip-wrap">
           <div className="strip" style={{ gridTemplateColumns: `repeat(${street.segments.length}, minmax(0, 1fr))` }}>
