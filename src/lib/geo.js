@@ -6,7 +6,7 @@
 // at one end of that axis plus a user-adjustable offset. This is an
 // approximate placement and the UI says so.
 
-const OVERPASS = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter'];
+const OVERPASS = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter', 'https://overpass.private.coffee/api/interpreter'];
 const BBOX = '-34.945,138.580,-34.895,138.625';
 export const OSM_NAMES = { hindley: 'Hindley Street', gouger: 'Gouger Street', hutt: 'Hutt Street', melbourne: 'Melbourne Street' };
 
@@ -26,33 +26,46 @@ export const BASES = {
   },
 };
 
+import EMBEDDED from '../data/osm-streets.json';
+
+function framesFrom(points) {
+  const frames = {};
+  Object.entries(points || {}).forEach(([id, p]) => { if (p.length >= 2) frames[id] = fitFrame(p); });
+  return frames;
+}
+
+async function query(url, q, ms) {
+  const ctl = new AbortController();
+  const t = setTimeout(() => ctl.abort(), ms);
+  try {
+    const r = await fetch(url, { method: 'POST', body: 'data=' + encodeURIComponent(q), headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, signal: ctl.signal });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const j = await r.json();
+    const pts = {};
+    for (const el of j.elements || []) {
+      const id = Object.keys(OSM_NAMES).find((k) => OSM_NAMES[k] === el.tags?.name);
+      if (id && el.geometry) (pts[id] = pts[id] || []).push(...el.geometry.map((p) => [p.lat, p.lon]));
+    }
+    if (!Object.keys(pts).length) throw new Error('empty');
+    return pts;
+  } finally {
+    clearTimeout(t);
+  }
+}
+
 let pending = null;
+// Street geometry is built into the app at deploy time (scripts/fetch-osm.mjs).
+// Only if that is missing does the browser ask OpenStreetMap directly, racing
+// the mirrors with a time limit.
 export function loadStreetGeometry() {
   if (pending) return pending;
+  const embedded = framesFrom(EMBEDDED.points);
+  if (Object.keys(embedded).length) return (pending = Promise.resolve(embedded));
   const names = Object.values(OSM_NAMES).join('|');
-  const q = `[out:json][timeout:25];way["highway"]["name"~"^(${names})$"](${BBOX});out geom;`;
-  pending = (async () => {
-    let lastErr;
-    for (const url of OVERPASS) {
-      try {
-        const r = await fetch(url, { method: 'POST', body: 'data=' + encodeURIComponent(q), headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        const j = await r.json();
-        const pts = {};
-        for (const el of j.elements || []) {
-          const id = Object.keys(OSM_NAMES).find((k) => OSM_NAMES[k] === el.tags?.name);
-          if (id && el.geometry) (pts[id] = pts[id] || []).push(...el.geometry.map((p) => [p.lat, p.lon]));
-        }
-        const frames = {};
-        Object.entries(pts).forEach(([id, p]) => { if (p.length >= 2) frames[id] = fitFrame(p); });
-        return frames;
-      } catch (e) {
-        lastErr = e;
-      }
-    }
-    pending = null;
-    throw lastErr || new Error('No response');
-  })();
+  const q = `[out:json][timeout:20];way["highway"]["name"~"^(${names})$"](${BBOX});out geom;`;
+  pending = Promise.any(OVERPASS.map((u) => query(u, q, 15000)))
+    .then(framesFrom)
+    .catch((e) => { pending = null; throw e; });
   return pending;
 }
 
