@@ -18,7 +18,7 @@ function CorridorPlan({ street, result, crownSize, selected, onPick, mapBase, fr
   return (
     <div className={`cp-wrap ${mapBase !== 'drawing' ? 'has-base' : ''}`}>
       <svg viewBox={`-2 -6 ${L + 4} ${W + 8}`} className="cp" role="img" aria-label={`Plan of ${street.name} with the selected scenario`}>
-        <BaseTiles frame={frame} align={align} width={W} base={mapBase} zoom={18} toGeo={(sx, sy) => [sx, sy]} x0={-4} x1={L + 4} y0={-8} y1={W + 4} onFail={onTileFail} />
+        <BaseTiles frame={frame} align={align} width={W} base={mapBase} zoom={19} toGeo={(sx, sy) => [sx, sy]} x0={-4} x1={L + 4} y0={-10} y1={W + 6} onFail={onTileFail} />
         {zones.map((z) => <rect key={z.i} x={0} y={z.u0} width={L} height={z.width} className={`pl-${z.kind}`} />)}
         {result.rows.map((r, i) => (
           <g key={r.seg.id} className={`cp-seg ${r.seg.shortlist ? 'is-short' : ''} ${selected === r.seg.id ? 'is-sel' : ''}`} onClick={() => onPick(r.seg.id)}>

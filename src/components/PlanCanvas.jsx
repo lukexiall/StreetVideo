@@ -16,6 +16,9 @@ export function PlanCanvas({ street, seg, species, speciesById, trees, selectedI
   const W = street.width;
   const base = { x: -4, y: -3.2, w: W + 8, h: SEGMENT_LENGTH + 6.4 };
   const [vb, setVb] = useState(base);
+  // pick the tile zoom whose pixels best match the screen (capped at the imagery's 19)
+  const pxW = svgRef.current?.clientWidth || 1000;
+  const tileZoom = Math.max(15, Math.min(19, Math.round(Math.log2((156543 * Math.cos((35 * Math.PI) / 180)) / (vb.w / pxW)))));
   const [ghost, setGhost] = useState(null);
   const drag = useRef(null);
   const pan = useRef(null);
@@ -123,7 +126,8 @@ export function PlanCanvas({ street, seg, species, speciesById, trees, selectedI
         onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerLeave={() => setGhost(null)}
         role="application" aria-label={`Plan of ${street.name} segment`}>
         <GlyphDefs species={species} />
-        <BaseTiles frame={frame} align={align} width={W} base={mapBase} zoom={19} toGeo={(sx, sy) => [segStart + sy, sx]} x0={-8} x1={W + 8} y0={-8} y1={SEGMENT_LENGTH + 8} onFail={onTileFail} />
+        <BaseTiles frame={frame} align={align} width={W} base={mapBase} zoom={tileZoom} toGeo={(sx, sy) => [segStart + sy, sx]}
+          x0={vb.x - vb.w} x1={vb.x + 2 * vb.w} y0={vb.y - vb.h} y1={vb.y + 2 * vb.h} onFail={onTileFail} />
         {/* buildings */}
         <rect x={-40} y={-40} width={40} height={SEGMENT_LENGTH + 80} className="pl-bld" />
         <rect x={W} y={-40} width={40} height={SEGMENT_LENGTH + 80} className="pl-bld" />

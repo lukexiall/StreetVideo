@@ -24,7 +24,12 @@ export function BaseTiles({ frame, align, width, base, zoom, toGeo, x0, x1, y0, 
   return (
     <g className="base-tiles" transform={r.transform} pointerEvents="none">
       {r.tiles.map((t) => (
-        <image key={t.key} href={t.href} x={t.x} y={t.y} width={256.6} height={256.6} preserveAspectRatio="none" onError={onFail} />
+        <image key={t.key} href={t.href} x={t.x} y={t.y} width={256.6} height={256.6} preserveAspectRatio="none"
+          onError={(e) => {
+            const img = e.currentTarget;
+            if (t.fallback && img.getAttribute('href') !== t.fallback) img.setAttribute('href', t.fallback);
+            else if (onFail) onFail();
+          }} />
       ))}
     </g>
   );

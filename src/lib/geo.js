@@ -20,7 +20,10 @@ export const BASES = {
   },
   satellite: {
     label: 'Satellite',
-    url: (z, x, y) => `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${x}`,
+    // Esri World Imagery (Clarity): the sharpest freely usable imagery Esri serves;
+    // tiles it lacks fall back to the standard World Imagery layer.
+    url: (z, x, y) => `https://clarity.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${x}`,
+    fallback: (z, x, y) => `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${x}`,
     maxZoom: 19,
     attribution: 'Imagery © Esri, Maxar, Earthstar Geographics, GIS User Community',
   },
@@ -128,14 +131,14 @@ export function tilesFor({ frame, align, width, base, zoom, toGeo, x0, x1, y0, y
   const tx1 = Math.floor(Math.max(...corners.map((c) => c[0])) / 256);
   const ty0 = Math.floor(Math.min(...corners.map((c) => c[1])) / 256);
   const ty1 = Math.floor(Math.max(...corners.map((c) => c[1])) / 256);
-  if ((tx1 - tx0 + 1) * (ty1 - ty0 + 1) > 120) return [];
+  if ((tx1 - tx0 + 1) * (ty1 - ty0 + 1) > 160) return [];
   // pixel coordinates are made relative to p0 to keep SVG numbers small
   const e = 0, f = 0;
   const m = `matrix(${Ai[0][0]},${Ai[1][0]},${Ai[0][1]},${Ai[1][1]},${e},${f})`;
   const out = [];
   for (let tx = tx0; tx <= tx1; tx++) {
     for (let ty = ty0; ty <= ty1; ty++) {
-      out.push({ key: `${base}-${z}-${tx}-${ty}`, href: b.url(z, tx, ty), x: tx * 256 - p0[0], y: ty * 256 - p0[1] });
+      out.push({ key: `${base}-${z}-${tx}-${ty}`, href: b.url(z, tx, ty), fallback: b.fallback ? b.fallback(z, tx, ty) : null, x: tx * 256 - p0[0], y: ty * 256 - p0[1] });
     }
   }
   return { transform: m, tiles: out, attribution: b.attribution };
