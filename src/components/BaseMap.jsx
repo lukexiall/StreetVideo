@@ -52,19 +52,36 @@ export function BaseControls({ street, base, setBase, align, setAlign, geo, fail
         ))}
       </div>
       {base !== 'drawing' && frame && (
-        <button className={`btn btn-sm btn-ghost ${open ? 'is-on' : ''}`} onClick={() => setOpen(!open)}>Align segments</button>
+        <button className={`btn btn-sm btn-ghost ${open ? 'is-on' : ''}`} onClick={() => setOpen(!open)}>Align & calibrate</button>
       )}
       {base !== 'drawing' && geo.status === 'loading' && <span className="fine">Loading street position…</span>}
       {unavailable && <span className="fine">Base map unavailable here. It works on the public site.</span>}
       {failed && base !== 'drawing' && !unavailable && <span className="fine">Map images blocked here. Open lukexiall.github.io/StreetVideo to see them.</span>}
       {open && base !== 'drawing' && frame && (
         <div className="align-pop">
-          <p className="fine">Study segment positions are not imported yet, so segment {street.prefix}1 is placed from one end of the OpenStreetMap centreline. Slide until the segments sit where you surveyed them.</p>
+          <p className="fine">Study segment positions are not imported yet, so segment {street.prefix}1 is placed from one end of the OpenStreetMap centreline. Slide until the segments sit where you surveyed them, then match the widths below to the photo.</p>
           <label className="field">
             <span>Start of {street.prefix}1: {a.offset} m from the {a.reverse ? (street.orientation === 'N–S' ? 'north' : 'east') : (street.orientation === 'N–S' ? 'south' : 'west')} end (street length about {frame ? Math.round(frame.length) : '?'} m)</span>
             <input id="align-offset" type="range" min={0} max={Math.max(maxOffset, 0)} step={1} value={Math.min(a.offset, maxOffset)} onChange={(e) => setAlign({ ...a, offset: Number(e.target.value) })} />
           </label>
           <label className="check"><input id="align-rev" type="checkbox" checked={a.reverse} onChange={(e) => setAlign({ ...a, reverse: e.target.checked })} /> Number segments from the other end</label>
+          <p className="align-h">Match the street to the photo</p>
+          <label className="field">
+            <span>Move across: {(a.shift || 0).toFixed(1)} m</span>
+            <input id="align-shift" type="range" min={-15} max={15} step={0.5} value={a.shift || 0} onChange={(e) => setAlign({ ...a, shift: Number(e.target.value) })} />
+          </label>
+          <label className="field">
+            <span>Building-to-building width: {street.width.toFixed(1)} m</span>
+            <input id="align-width" type="range" min={12} max={60} step={0.5} value={Math.round(street.width * 2) / 2} onChange={(e) => setAlign({ ...a, width: Number(e.target.value) })} />
+          </label>
+          <label className="field">
+            <span>Footpath width (each side): {street.profile[0].width.toFixed(1)} m</span>
+            <input id="align-fp" type="range" min={1.5} max={12} step={0.1} value={street.profile[0].width} onChange={(e) => setAlign({ ...a, footpath: Number(e.target.value) })} />
+          </label>
+          <div className="align-row">
+            <span className="fine">{street.calibratedBy ? 'Using your calibrated widths for all results.' : 'Using the demo cross-section.'}</span>
+            <button className="btn btn-sm btn-ghost" onClick={() => setAlign({ offset: a.offset, reverse: a.reverse })}>Reset widths</button>
+          </div>
           <p className="fine">{BASES[base].attribution}</p>
         </div>
       )}

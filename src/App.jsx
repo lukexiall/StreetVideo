@@ -1,4 +1,4 @@
-import { STREETS, STREET_BY_ID } from './data/streets.js';
+import { STREETS, STREET_BY_ID, calibrated } from './data/streets.js';
 import { load, save } from './lib/store.js';
 import { HomeMap } from './components/HomeMap.jsx';
 import { StreetSelect } from './components/StreetSelect.jsx';
@@ -32,7 +32,7 @@ export function App() {
   const [base, setBase] = useState(() => load('base', 'satellite'));
   const [aligns, setAligns] = useState(() => load('aligns', {}));
   const geo = useStreetFrames();
-  const mapProps = { base, setBase, aligns, setAlign: (id, a) => setAligns((x) => ({ ...x, [id]: a })), geo };
+  const mapProps = { base, setBase, aligns, setAlign: (id, a) => setAligns((x) => ({ ...x, [id]: a })), geo, cal: (s) => calibrated(s, aligns[s.id]) };
   const [toast, notify] = useToast();
 
   useEffect(() => save('view', view), [view]);
@@ -44,7 +44,7 @@ export function App() {
   useEffect(() => save('base', base), [base]);
   useEffect(() => save('aligns', aligns), [aligns]);
 
-  const street = STREET_BY_ID[streetId] || STREETS[0];
+  const street = calibrated(STREET_BY_ID[streetId] || STREETS[0], aligns[streetId]);
   const seg = street.segments.find((s) => s.id === segId) || street.segments[0];
   const trees = designs[seg.id] || [];
   const setTrees = (t) => setDesigns((d) => ({ ...d, [seg.id]: t }));

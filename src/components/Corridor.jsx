@@ -65,7 +65,7 @@ export function Corridor({ street, crownSize, designs, onOpenSegment, onAdopt, m
   const [failed, setFailed] = useState(false);
   const frame = mapProps.geo.frames[street.id];
   const mapBase = frame && mapProps.base !== 'drawing' ? mapProps.base : 'drawing';
-  const [mode, setMode] = useState('balanced');
+  const [mode, setMode] = useState('existing');
   const [fallbackId, setFallbackId] = useState('chinese-elm');
   const [selected, setSelected] = useState(null);
   const [confirm, setConfirm] = useState(false);

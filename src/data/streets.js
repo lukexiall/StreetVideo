@@ -81,3 +81,21 @@ export function zonesFor(street) {
     return z;
   });
 }
+
+// User calibration against the base map: total building-to-building width
+// and footpath width (metres). Inner lanes, parking and medians keep their
+// demo proportions and are scaled to fill the remaining width.
+const calCache = new Map();
+export function calibrated(street, cal) {
+  if (!cal || (cal.width == null && cal.footpath == null)) return street;
+  const key = `${street.id}|${cal.width}|${cal.footpath}`;
+  if (calCache.has(key)) return calCache.get(key);
+  const fp = cal.footpath ?? street.footpath;
+  const width = Math.max(2 * fp + 3, cal.width ?? street.width);
+  const inner = street.lanes.reduce((a, p) => a + p.width, 0);
+  const k = (width - 2 * fp) / inner;
+  const profile = [P('footpath', fp, 'Footpath'), ...street.lanes.map((p) => P(p.kind, Math.round(p.width * k * 100) / 100, p.label)), P('footpath', fp, 'Footpath')];
+  const out = { ...street, profile, width: profile.reduce((a, p) => a + p.width, 0), buildingHeight: Math.round(street.hw * width * 10) / 10, calibratedBy: 'user' };
+  calCache.set(key, out);
+  return out;
+}

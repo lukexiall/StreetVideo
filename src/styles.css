@@ -597,3 +597,6 @@ tr.is-cur td { background: var(--accent-soft); font-weight: 600; }
 .has-base .tree-crown > * { fill-opacity: 0.85; }
 .cp-wrap.has-base .cp { min-width: 2200px; }
 .cp-wrap.has-base { max-height: none; }
+.align-pop { max-height: 70vh; overflow-y: auto; }
+.align-h { font-weight: 600; font-size: 12.5px; border-top: 1px solid var(--line); padding-top: 8px; }
+.align-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }

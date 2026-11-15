@@ -56,7 +56,7 @@ export function StreetSelect({ onDesign, initialStreet, onStreet, crownSize, des
   const [view, setView] = useState('segments');
   const [streetId, setStreetId] = useState(initialStreet || 'hindley');
   const [metric, setMetric] = useState('gvi');
-  const street = STREETS.find((s) => s.id === streetId);
+  const street = mapProps.cal(STREETS.find((s) => s.id === streetId));
   const [segId, setSegId] = useState(null);
   const seg = street.segments.find((s) => s.id === segId) || null;
   const m = METRICS.find((x) => x.id === metric);
@@ -167,7 +167,7 @@ export function StreetSelect({ onDesign, initialStreet, onStreet, crownSize, des
             <summary>Street cross-section used in the designer</summary>
             <CrossSection street={street} />
             <p className="fine">
-              Widths in metres. Footpaths use the thesis street mean ({street.footpath} m, Table 5.3); lanes, parking and medians are a demonstration layout because the thesis does not report carriageway geometry.
+              Widths in metres. {street.calibratedBy ? 'Calibrated by you against the satellite image (Align & calibrate).' : `Footpaths use the thesis street mean (${street.footpath} m, Table 5.3); lanes, parking and medians are a demonstration layout because the thesis does not report carriageway geometry.`}
             </p>
           </details>
         </div>

@@ -100,7 +100,7 @@ export function geoPoint(frame, align, width, along, u) {
   const rev = !!align?.reverse;
   const s = (align?.offset || 0) + along;
   const t = rev ? frame.max - s : frame.min + s;
-  const k = frame.mid + (u - width / 2);
+  const k = frame.mid + (align?.shift || 0) + (u - width / 2);
   const x = frame.a[0] * t + frame.c[0] * k;
   const y = frame.a[1] * t + frame.c[1] * k;
   return [frame.lat0 + y / M_LAT, frame.lon0 + x / frame.mLon];
