@@ -1,0 +1,12 @@
+domain,item,rho,lo,hi
+Density,FAR,0.08,-0.101,0.255
+Diversity,Functional mix (Shannon index),0.267,0.092,0.439
+Design,H/W ratio,-0.223,-0.413,-0.021
+,Footpath width (m),0.28,0.103,0.44
+,Seating presence (0/1),0.045,-0.135,0.246
+,Outdoor dining presence (0/1),-0.013,-0.203,0.178
+,Pedestrian crossing presence (0/1),-0.001,-0.207,0.196
+"Destination
+accessibility",POI density (per 100 m frontage),0.028,-0.171,0.224
+"Distance to
+transit",Bus-stop presence within 100 m (0/1),0.023,-0.166,0.202
