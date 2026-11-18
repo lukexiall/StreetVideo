@@ -1,6 +1,6 @@
 """Publication figures for the GVI-duration re-analysis (Fig. 6, Fig. S2, Fig. S3).
 Usage: python3 make_figures.py <data_dir> <model_out_dir> <fig_out_dir>"""
-import sys, os
+import sys, os, re
 import numpy as np, pandas as pd
 import matplotlib
 matplotlib.use("Agg")
@@ -24,13 +24,13 @@ gvi = pd.read_csv(os.path.join(data_dir, "gvi.csv"))
 ped = pd.read_csv(os.path.join(data_dir, "ped.csv"), usecols=["duration_s", "GVI_seasonal"])
 fig, (a, b) = plt.subplots(2, 1, figsize=(7.0, 7.2), gridspec_kw={"height_ratios": [1, 1.15], "hspace": 0.38})
 a.fill_between(cur.GVI, cur.lo, cur.hi, color=BLUE, alpha=0.15, lw=0, label="95% CI")
-a.plot(cur.GVI, cur.median, color=BLUE, lw=1.8, label="Adjusted median")
+a.plot(cur.GVI, cur["median"], color=BLUE, lw=1.8, label="Adjusted median")
 ylo = np.floor(cur.lo.min() / 2) * 2 - 2
 a.set_ylim(ylo, np.ceil(cur.hi.max() / 2) * 2)
 a.plot(gvi.GVI_seasonal, np.full(len(gvi), ylo), "|", color=BLUE, ms=9, mew=0.6, alpha=0.7, clip_on=False)
 a.set_xlim(0, 40); a.set_xlabel("Camera-view GVI (%)")
 a.set_ylabel("Adjusted median observed\nsegment duration (s)")
-a.legend(frameon=False, loc="lower right")
+a.legend(frameon=False, loc="upper left")
 a.grid(alpha=0.25, lw=0.5)
 a.set_title("A", loc="left", fontweight="bold")
 hb = b.hexbin(ped.GVI_seasonal, ped.duration_s, gridsize=(70, 40), yscale="log", bins="log",
@@ -52,7 +52,7 @@ txt = []
 for s in cols:
     c = pd.read_csv(os.path.join(mod_dir, f"curve_{s}.csv"))
     ax.plot(c.GVI, c.TR_vs10, color=cols[s], lw=1.8, label=labs[s])
-    v = c.loc[np.isclose(c.GVI, 20), "TR_vs10"].iloc[0]; txt.append(f"{labs[s]} = {v:.2f}")
+    v = pd.read_csv(os.path.join(mod_dir, f"summary_{s}.csv")).TR20v10.iloc[0]; txt.append(f"{labs[s]} = {v:.2f}")
 ax.set_xlim(1.7, 38.7); ax.set_xticks([1.7, 5, 10, 15, 20, 25, 30, 35, 38.7])
 ax.set_xticklabels(["1.7", "5", "10", "15", "20", "25", "30", "35", "38.7"])
 ax.set_xlabel("Camera-view GVI (%)"); ax.set_ylabel("Time ratio relative to 10% GVI")
@@ -70,12 +70,13 @@ rows = [("Primary model", [("1. Primary: log-normal AFT, 4-knot RCS", "Full")]),
         ("Additional adjustment", [("9. + Pedestrian volume", "Volume")]),
         ("Leave-one-street-out", [("10. Exclude Hindley Street", "exHindley"), ("11. Exclude Gouger Street", "exGouger"),
                                   ("12. Exclude Melbourne Street", "exMelbourne"), ("13. Exclude Hutt Street", "exHutt")])]
-items, y = [], 0
+items, y, num = [], 0, 0
 for head, lst in rows:
     lst = [(l, s) for l, s in lst if os.path.exists(os.path.join(mod_dir, f"summary_{s}.csv"))]
     if not lst: continue
     items.append(("H", head, None, y)); y -= 1
     for l, s in lst:
+        num += 1; l = f"{num}. " + re.sub(r"^\d+\. ", "", l)
         items.append(("R", l, pd.read_csv(os.path.join(mod_dir, f"summary_{s}.csv")).iloc[0], y)); y -= 1
 prim = pd.read_csv(os.path.join(mod_dir, "summary_Full.csv")).iloc[0].TR20v10
 fig, ax = plt.subplots(figsize=(7.2, 0.28 * len(items) + 0.8))
