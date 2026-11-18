@@ -57,9 +57,18 @@ rhs <- paste(c(spl, st, cov, extra), collapse = " + ")
 f <- as.formula(paste("Surv(duration_s, departure_status) ~", rhs, "+ (1|segment) + (1|session)"))
 
 t0 <- Sys.time()
+ip <- NULL
+if (dist == "weibull") {        # warm start: GVI + street model first, then add covariates from 0
+  fb <- as.formula(paste("Surv(duration_s, departure_status) ~", paste(c(spl, st), collapse = " + "), "+ (1|segment) + (1|session)"))
+  mb <- SurvregME(fb, data = d, dist = dist); cat("warm-start base convergence", mb$opt$convergence, "\n")
+  m0 <- SurvregME(f, data = d, dist = dist, nofit = TRUE)
+  b0 <- setNames(rep(0, length(m0$param$beta)), names(m0$param$beta))
+  b0[names(mb$param$beta)] <- mb$param$beta
+  ip <- list(beta = b0, theta = mb$param$theta)
+}
 for (attempt in 1:6) {          # tramME restarts from perturbed values on failure; reseed until converged
   set.seed(20250 + attempt)
-  m <- SurvregME(f, data = d, dist = dist)
+  m <- SurvregME(f, data = d, dist = dist, initpar = if (attempt == 1) ip else NULL)
   cat("attempt", attempt, "convergence", m$opt$convergence, "\n")
   if (m$opt$convergence == 0) break
 }
