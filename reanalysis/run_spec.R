@@ -57,7 +57,11 @@ rhs <- paste(c(spl, st, cov, extra), collapse = " + ")
 f <- as.formula(paste("Surv(duration_s, departure_status) ~", rhs, "+ (1|segment) + (1|session)"))
 
 t0 <- Sys.time()
-m <- SurvregME(f, data = d, dist = dist)
+m <- SurvregME(f, data = d, dist = dist, control = optim_control(iter.max = 3000, eval.max = 6000))
+if (m$opt$convergence != 0) {   # retry with a different optimiser
+  cat("retrying with BFGS from previous estimates\n")
+  m <- SurvregME(f, data = d, dist = dist, control = optim_control(method = "BFGS", maxit = 3000))
+}
 cat(spec, ": fitted in", round(difftime(Sys.time(), t0, units = "mins"), 1), "min; convergence", m$opt$convergence, "\n")
 if (m$opt$convergence != 0) stop("NOT CONVERGED")
 
