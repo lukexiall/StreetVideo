@@ -34,7 +34,10 @@ for (s in which_sets) {
   rhs <- paste(c(sp, "street", if (nzchar(sets[[s]])) sets[[s]]), collapse = " + ")
   f <- as.formula(paste("Surv(duration_s, departure_status) ~", rhs, "+ (1|segment) + (1|session)"))
   t0 <- Sys.time()
-  m <- SurvregME(f, data = d, dist = "lognormal")
+  m <- SurvregME(f, data = d, dist = "lognormal",
+                 control = optim_control(control = list(iter.max = 5000, eval.max = 10000)))
+  cat("convergence code:", m$opt$convergence, m$opt$message, "\n")
+  if (m$opt$convergence != 0) warning("NOT CONVERGED: ", s)
   cat("\n=====", s, "fitted in", round(difftime(Sys.time(), t0, units="mins"),1), "min; logLik", logLik(m), "\n")
   saveRDS(m, file.path(out_dir, paste0("fit_", s, ".rds")))
   ## tram parameterisation: Phi(th1 + th2*log t - x'b). log-median = (x'b - th1)/th2  => survreg beta = b/th2
@@ -59,10 +62,6 @@ for (s in which_sets) {
   X  <- model.matrix(as.formula(paste("~", rhs)), d)[, -1, drop = FALSE]
   bx <- cf[colnames(X)]; stopifnot(!anyNA(bx))
   lp_rest <- drop(X[, setdiff(colnames(X), names(b)), drop=FALSE] %*% bx[setdiff(colnames(X), names(b))])
-  pred_fun <- function(par, gv) {          # averaged median at GVI = gv
-    s_g <- drop(rcs_basis(gv) %*% par[names(b)])
-    mean(exp((lp_rest*0 + s_g - par[names(cf)[1]]) / par[th2] + 0)) * 1   # placeholder, replaced below
-  }
   ## exact: mean_i exp((s(g) + rest_i - th1)/th2), with rest_i depending on par too
   Xr <- X[, setdiff(colnames(X), names(b)), drop = FALSE]
   med <- function(par, gv) mean(exp((drop(rcs_basis(gv) %*% par[names(b)]) + drop(Xr %*% par[colnames(Xr)]) - par[names(cf)[1]]) / par[th2]))
